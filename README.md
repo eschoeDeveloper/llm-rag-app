@@ -9,13 +9,17 @@
 
 ## 🛠 주요 로직
 
-
+1. ASK (no RAG) -> OPENAI CLIENT를 통한 LLM
+2. CHAT (RAG) -> PgVector를 통한 벡터 연산 및 Top-K 유사도 검색
+3. Vector Search -> 벡터 수치 및 pgVector 라이브러리를 활용한 검색
 
 ---
 
 ## 🏗 아키텍처 및 기술 스택
 
 ### 프론트엔드
+
+# **언어/프레임워크** : react 19, tailwind 3.x
 
 ---
 
