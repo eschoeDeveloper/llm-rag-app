@@ -32,6 +32,13 @@
    cd llm-rag-app
    ```
 
+2. 빌드 및 실행
+
+   ```
+   npm i
+   npm run build
+   npm run start
+   ```
 
 ---
 
