@@ -45,11 +45,23 @@
 ## 📂 프로젝트 구조
 
 ```
-├── 
-│   ├── LLM-RAG-APP       # Config 클래스
-│   └── 
-├── 
-│   ├── application.yaml # 애플리케이션 설정 파일
+├── LLM-RAG-APP
+│   ├── public
+│   ├── src
+│   ├── .gitignore
+│   ├── package.json          # PACKAGE 정보
+│   ├── postcss.config.js     # POSTCSS CONFIG
+│   ├── tailwind.config.js    # TAILWIND CONFIG
+│   └── craco.config.js       # CRACO CONFIG
+├── LLM-RAG-APP/src
+│   ├── Chatbot.js            # LLM+RAG APP UI
+│   ├── Chatbot.test.js
+│   ├── index.css             # LLM+RAG APP CSS
+│   ├── index.js
+│   ├── logo.svg
+│   ├── reportWebVitals.js
+│   ├── setupProxy.js
+└── └── setupTests.js 
 ```
 
 ---
