@@ -10,7 +10,7 @@ import { useLocalStorage } from "./shared/hooks/useLocalStorage.ts";
 const DEFAULT_BASE =
    (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_API_BASE)
      ? (import.meta as any).env.VITE_API_BASE
-     : (process.env.REACT_APP_API_BASE || process.env.API_BASE || "http://localhost:8080/api");
+     : (process.env.REACT_APP_API_BASE || process.env.API_BASE || "https://llm-rag-api-a8768292f672.herokuapp.com/");
 
 type Tab = "chat" | "vector";
 
@@ -26,7 +26,7 @@ export default function App() {
           <p className="text-sm text-gray-600">Test your Spring WebFlux + PostgreSQL/pgvector backend</p>
         </header>
 
-        <Section title="API Endpoint" right={<Chip>e.g. http://localhost:8080/api</Chip>}>
+        <Section title="API Endpoint" right={<Chip>e.g. https://llm-rag-api-a8768292f672.herokuapp.com/api</Chip>}>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div className="md:col-span-3">
               <Input value={base} onChange={setBase} placeholder="API base URL" />
