@@ -19,13 +19,13 @@ export default function App() {
       <div className="mx-auto max-w-5xl px-5 py-8">
         <header className="mb-6">
           <h1 className="text-2xl font-bold">LLM RAG Playground</h1>
-          <p className="text-sm text-gray-600">Test your Spring WebFlux + PostgreSQL/pgvector backend</p>
+          <p className="text-sm text-gray-600">Spring WebFlux + PostgreSQL/pgvector LLM + RAG Test</p>
         </header>
 
-        <Section title="API Endpoint" right={<Chip>e.g. https://llm-rag-api-a8768292f672.herokuapp.com/api</Chip>}>
+        <Section title="API Endpoint" right={<Chip>e.g. ${base}</Chip>}>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div className="md:col-span-3">
-              <Input value={base} onChange={setBase} placeholder="API base URL" />
+              <Input value={base} onChange={setBase} placeholder="API base URL" disabled={base !== undefined ? true : false}/>
             </div>
             <div className="flex items-center gap-2">
               <Button onClick={() => setTab("chat")} disabled={tab === "chat"}>Chat</Button>
