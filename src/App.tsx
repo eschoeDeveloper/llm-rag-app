@@ -7,11 +7,7 @@ import { Button } from "./shared/ui/Button.tsx";
 import { Chip } from "./shared/ui/Chip.tsx";
 import { useLocalStorage } from "./shared/hooks/useLocalStorage.ts";
 
-const DEFAULT_BASE =
-   (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_API_BASE)
-     ? (import.meta as any).env.VITE_API_BASE
-     : (process.env.REACT_APP_API_BASE || process.env.API_BASE || "https://llm-rag-api-a8768292f672.herokuapp.com/api");
-
+const DEFAULT_BASE = process.env.REACT_APP_API_BASE || "https://llm-rag-api-a8768292f672.herokuapp.com/api";
 type Tab = "chat" | "vector";
 
 export default function App() {
