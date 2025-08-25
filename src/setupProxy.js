@@ -4,7 +4,7 @@ module.exports = function (app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://localhost:8080', // 백엔드 주소
+      target: 'https://llm-rag-api-a8768292f672.herokuapp.com', // 백엔드 주소
       changeOrigin: true,
       // 필요 시
       // pathRewrite: { '^/api': '' },
