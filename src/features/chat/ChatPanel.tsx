@@ -3,101 +3,85 @@ import React from "react";
 import { Section } from "../../shared/ui/Section.tsx";
 import { Textarea } from "../../shared/ui/Textarea.tsx";
 import { Button } from "../../shared/ui/Button.tsx";
+import { Input } from "../../shared/ui/Input.tsx";
 import { useScrollToBottom } from "../../shared/hooks/useScrollToBottom.ts";
-import { postText } from "../../shared/api/http.ts";
-
+import { useRAGChat } from "../../shared/hooks/useRAGChat.ts";
+import { usePromptEngine } from "../../shared/hooks/usePromptEngine.ts";
 import { Message, Modes, ModeValue } from "./types.ts";
 
 export function ChatPanel({ base }: { base: string }) {
-  const [messages, setMessages] = React.useState<Message[]>([]);
   const [input, setInput] = React.useState("");
   const [mode, setMode] = React.useState<ModeValue>("ask");
-  const [loading, setLoading] = React.useState(false);
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
+
+  const {
+    messages,
+    loading,
+    searchResults,
+    config,
+    sendMessage,
+    clearMessages,
+    cancelRequest,
+    updateConfig,
+    evaluateSearchQuality,
+    optimizeParameters
+  } = useRAGChat(base);
+
+  const {
+    selectedTemplate,
+    setSelectedTemplate,
+    customPrompt,
+    setCustomPrompt,
+    getTemplates,
+    renderPrompt,
+    validatePrompt
+  } = usePromptEngine();
 
   const boxRef = useScrollToBottom([messages]);
-  const abortRef = React.useRef<AbortController | null>(null);
 
-  // Mode 타입 가드: select 등 문자열 입력을 안전하게 좁히기
+  // Mode 타입 가드
   const isModeValue = (v: string): v is ModeValue =>
     Modes.some((m) => m.value === v);
 
-  // 언마운트/리렌더 정리: 진행 중 요청 취소
+  // 언마운트 시 요청 취소
   React.useEffect(() => {
     return () => {
-      abortRef.current?.abort();
-      abortRef.current = null;
+      cancelRequest();
     };
-  }, []);
+  }, [cancelRequest]);
 
-  async function send() {
+  const handleSend = async () => {
     const text = input.trim();
     if (!text || loading) return;
 
-    // 나의 메시지를 먼저 UI에 반영
-    const me: Message = { role: "user", content: text, ts: Date.now() };
-    setMessages((prev) => [...prev, me]);
+    // 프롬프트 렌더링
+    const renderedPrompt = renderPrompt({
+      userQuery: text,
+      searchResults: mode === 'chat' ? searchResults : undefined,
+      conversationHistory: messages.slice(-5)
+    });
+
     setInput("");
+    await sendMessage(renderedPrompt, mode);
+  };
 
-    // 이전 요청 취소
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setLoading(true);
-    try {
-      const url = `${base}/${mode}`; // /ask 또는 /chat
-      const replyText = await postText(url, { query: me.content }, controller.signal);
-
-      const reply: Message = {
-        role: "assistant",
-        content: replyText,
-        ts: Date.now(),
-      };
-      setMessages((prev) => [...prev, reply]);
-    } catch (e: unknown) {
-      const msg =
-        e instanceof Error
-          ? e.message
-          : typeof e === "string"
-          ? e
-          : "Unexpected error";
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: msg,
-          ts: Date.now(),
-          error: true,
-        },
-      ]);
-    } finally {
-      // 완료 후 현재 컨트롤러는 더이상 의미 없음
-      if (abortRef.current === controller) {
-        abortRef.current = null;
-      }
-      setLoading(false);
-    }
-  }
-
-  // Ctrl/Cmd+Enter 로 전송 (선택 사항)
-  const onTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
-      void send();
+      void handleSend();
     }
-    // Esc 로 진행중 요청 취소 (선택 사항)
     if (e.key === "Escape") {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      setLoading(false);
+      cancelRequest();
     }
   };
 
+  const searchQuality = evaluateSearchQuality();
+  const promptValidation = validatePrompt(customPrompt);
+
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-      <div className="md:col-span-2">
-        <Section title="Chat">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+      <div className="lg:col-span-3">
+        <Section title="Enhanced Chat">
           <div
             ref={boxRef}
             className="h-[420px] overflow-y-auto rounded-xl border bg-white p-4"
@@ -124,6 +108,13 @@ export function ChatPanel({ base }: { base: string }) {
                       {m.role}
                     </div>
                     {m.content}
+                    {m.metadata && (
+                      <div className="mt-2 text-xs text-gray-500">
+                        {m.metadata.tokens && `Tokens: ${m.metadata.tokens}`}
+                        {m.metadata.processingTime && ` | Time: ${m.metadata.processingTime}ms`}
+                        {m.metadata.searchResults && ` | Results: ${m.metadata.searchResults.length}`}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -134,14 +125,14 @@ export function ChatPanel({ base }: { base: string }) {
             className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-6"
             onSubmit={(e) => {
               e.preventDefault();
-              void send();
+              void handleSend();
             }}
           >
             <div className="md:col-span-5">
               <Textarea
                 value={input}
                 onChange={setInput}
-                onKeyDown={onTextareaKeyDown}
+                onKeyDown={handleKeyDown}
                 placeholder="Ask something…"
                 rows={3}
                 disabled={loading}
@@ -150,11 +141,7 @@ export function ChatPanel({ base }: { base: string }) {
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="sr-only" htmlFor="mode-select">
-                Mode
-              </label>
               <select
-                id="mode-select"
                 className="rounded-xl border p-2 text-sm"
                 value={mode}
                 onChange={(e) => {
@@ -176,27 +163,140 @@ export function ChatPanel({ base }: { base: string }) {
               </Button>
             </div>
           </form>
+
+          <div className="mt-3 flex gap-2">
+            <Button onClick={clearMessages} variant="outline" size="sm">
+              Clear
+            </Button>
+            <Button 
+              onClick={() => setShowAdvanced(!showAdvanced)} 
+              variant="outline" 
+              size="sm"
+            >
+              {showAdvanced ? "Hide" : "Show"} Advanced
+            </Button>
+          </div>
         </Section>
       </div>
 
-      <div>
-        <Section title="Debug">
+      <div className="space-y-6">
+        <Section title="Debug Info">
           <div className="space-y-2 text-xs text-gray-600">
-            <div>
-              Base: <code className="rounded bg-gray-100 px-1">{base}</code>
-            </div>
-            <div>
-              Mode: <code className="rounded bg-gray-100 px-1">{mode}</code>
-            </div>
+            <div>Base: <code className="rounded bg-gray-100 px-1">{base}</code></div>
+            <div>Mode: <code className="rounded bg-gray-100 px-1">{mode}</code></div>
             <div>Messages: {messages.length}</div>
-            <div>
-              Loading:{" "}
-              <code className="rounded bg-gray-100 px-1">
-                {String(loading)}
-              </code>
-            </div>
+            <div>Loading: <code className="rounded bg-gray-100 px-1">{String(loading)}</code></div>
+            {searchResults.length > 0 && (
+              <div>
+                Search Quality: 
+                <span className={`ml-1 px-1 rounded text-white text-xs ${
+                  searchQuality.qualityRating === 'excellent' ? 'bg-green-500' :
+                  searchQuality.qualityRating === 'good' ? 'bg-blue-500' :
+                  searchQuality.qualityRating === 'fair' ? 'bg-yellow-500' :
+                  'bg-red-500'
+                }`}>
+                  {searchQuality.qualityRating}
+                </span>
+              </div>
+            )}
           </div>
         </Section>
+
+        {showAdvanced && (
+          <>
+            <Section title="Prompt Settings">
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Template</label>
+                  <select
+                    className="w-full rounded-xl border p-2 text-sm"
+                    value={selectedTemplate}
+                    onChange={(e) => setSelectedTemplate(e.target.value)}
+                  >
+                    {getTemplates().map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">Custom Prompt</label>
+                  <Textarea
+                    value={customPrompt}
+                    onChange={setCustomPrompt}
+                    placeholder="Override template with custom prompt..."
+                    rows={3}
+                  />
+                  {customPrompt && !promptValidation.valid && (
+                    <div className="mt-1 text-xs text-red-600">
+                      {promptValidation.errors.join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Section>
+
+            <Section title="RAG Config">
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Top K</label>
+                  <Input
+                    type="number"
+                    value={config.topK.toString()}
+                    onChange={(value) => updateConfig({ topK: parseInt(value) || 10 })}
+                    min="1"
+                    max="50"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">Threshold</label>
+                  <Input
+                    type="number"
+                    value={config.threshold.toString()}
+                    onChange={(value) => updateConfig({ threshold: parseFloat(value) || 0.7 })}
+                    min="0"
+                    max="1"
+                    step="0.1"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">Temperature</label>
+                  <Input
+                    type="number"
+                    value={config.temperature.toString()}
+                    onChange={(value) => updateConfig({ temperature: parseFloat(value) || 0.7 })}
+                    min="0"
+                    max="2"
+                    step="0.1"
+                  />
+                </div>
+              </div>
+            </Section>
+
+            {searchResults.length > 0 && (
+              <Section title="Search Results">
+                <div className="space-y-2">
+                  {searchResults.slice(0, 3).map((result, i) => (
+                    <div key={i} className="rounded border p-2 text-xs">
+                      <div className="font-medium">#{result.id}</div>
+                      <div className="text-gray-600 line-clamp-2">{result.content}</div>
+                      <div className="text-gray-500">Score: {result.score?.toFixed(3)}</div>
+                    </div>
+                  ))}
+                  {searchResults.length > 3 && (
+                    <div className="text-xs text-gray-500">
+                      +{searchResults.length - 3} more results
+                    </div>
+                  )}
+                </div>
+              </Section>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
