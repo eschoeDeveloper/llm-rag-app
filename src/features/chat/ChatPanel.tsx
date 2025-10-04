@@ -228,16 +228,15 @@ export function ChatPanel({ base }: { base: string }) {
           >
             🗑️ Clear Chat
           </Button>
-          {sessionId && (
-            <Button 
-              onClick={loadHistory} 
-              variant="outline" 
-              size="md"
-              className="rounded-2xl font-medium transition-all duration-200 hover:scale-105"
-            >
-              📜 Load History
-            </Button>
-          )}
+          <Button 
+            onClick={loadHistory} 
+            variant="outline" 
+            size="md"
+            disabled={!sessionId}
+            className="rounded-2xl font-medium transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            📜 Load History
+          </Button>
           <Button 
             onClick={() => setShowAdvanced(!showAdvanced)} 
             variant="outline" 
