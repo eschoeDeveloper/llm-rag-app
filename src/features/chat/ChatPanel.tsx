@@ -18,8 +18,10 @@ export function ChatPanel({ base }: { base: string }) {
     loading,
     searchResults,
     config,
+    sessionId,
     sendMessage,
     clearMessages,
+    loadHistory,
     cancelRequest,
     updateConfig,
     evaluateSearchQuality,
@@ -217,7 +219,7 @@ export function ChatPanel({ base }: { base: string }) {
         </form>
 
         {/* Action Buttons */}
-        <div className="mt-4 flex gap-3">
+        <div className="mt-4 flex gap-3 flex-wrap">
           <Button 
             onClick={clearMessages} 
             variant="outline" 
@@ -226,6 +228,16 @@ export function ChatPanel({ base }: { base: string }) {
           >
             🗑️ Clear Chat
           </Button>
+          {sessionId && (
+            <Button 
+              onClick={loadHistory} 
+              variant="outline" 
+              size="md"
+              className="rounded-2xl font-medium transition-all duration-200 hover:scale-105"
+            >
+              📜 Load History
+            </Button>
+          )}
           <Button 
             onClick={() => setShowAdvanced(!showAdvanced)} 
             variant="outline" 
@@ -264,6 +276,13 @@ export function ChatPanel({ base }: { base: string }) {
               <span className="text-sm font-medium text-gray-600">Messages</span>
               <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                 {messages.length}
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-600">Session</span>
+              <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                {sessionId ? sessionId.substring(0, 8) + '...' : 'New'}
               </span>
             </div>
             

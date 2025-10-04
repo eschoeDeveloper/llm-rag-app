@@ -62,18 +62,25 @@ export class RAGService {
     query: string,
     baseUrl: string,
     searchResults: SearchResult[],
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    sessionId?: string | null
   ): Promise<ChatResponse> {
     const startTime = Date.now();
     
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+
       const response = await fetch(`${baseUrl}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           query,
           searchResults,
-          config: this.config
+          config: this.config,
+          sessionId
         }),
         signal
       });
@@ -84,9 +91,11 @@ export class RAGService {
 
       const data = await response.json();
       const processingTime = Date.now() - startTime;
+      const responseSessionId = response.headers.get('X-Session-ID') || data.sessionId;
 
       return {
         content: data.content || data,
+        sessionId: responseSessionId,
         metadata: {
           model: data.model || 'unknown',
           tokens: data.tokens || 0,
@@ -103,17 +112,24 @@ export class RAGService {
   async askWithoutRAG(
     query: string,
     baseUrl: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    sessionId?: string | null
   ): Promise<ChatResponse> {
     const startTime = Date.now();
     
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (sessionId) {
+        headers['X-Session-ID'] = sessionId;
+      }
+
       const response = await fetch(`${baseUrl}/ask`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           query,
-          config: this.config
+          config: this.config,
+          sessionId
         }),
         signal
       });
@@ -124,9 +140,11 @@ export class RAGService {
 
       const data = await response.json();
       const processingTime = Date.now() - startTime;
+      const responseSessionId = response.headers.get('X-Session-ID') || data.sessionId;
 
       return {
         content: data.content || data,
+        sessionId: responseSessionId,
         metadata: {
           model: data.model || 'unknown',
           tokens: data.tokens || 0,
@@ -204,6 +222,63 @@ export class RAGService {
     }
 
     return {};
+  }
+
+  // 히스토리 조회
+  async getHistory(baseUrl: string, sessionId: string): Promise<string> {
+    try {
+      const response = await fetch(`${baseUrl}/history`, {
+        method: 'GET',
+        headers: { 'X-Session-ID': sessionId }
+      });
+
+      if (!response.ok) {
+        throw new Error(`History fetch failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.history || '대화 히스토리가 없습니다.';
+    } catch (error) {
+      console.error('History fetch error:', error);
+      throw error;
+    }
+  }
+
+  // 히스토리 삭제
+  async clearHistory(baseUrl: string, sessionId: string): Promise<void> {
+    try {
+      const response = await fetch(`${baseUrl}/history`, {
+        method: 'DELETE',
+        headers: { 'X-Session-ID': sessionId }
+      });
+
+      if (!response.ok) {
+        throw new Error(`History clear failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('History clear error:', error);
+      throw error;
+    }
+  }
+
+  // 히스토리 개수 조회
+  async getHistoryCount(baseUrl: string, sessionId: string): Promise<number> {
+    try {
+      const response = await fetch(`${baseUrl}/history/count`, {
+        method: 'GET',
+        headers: { 'X-Session-ID': sessionId }
+      });
+
+      if (!response.ok) {
+        throw new Error(`History count fetch failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.count || 0;
+    } catch (error) {
+      console.error('History count fetch error:', error);
+      throw error;
+    }
   }
 }
 

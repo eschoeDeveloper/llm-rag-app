@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { RAGService } from '../services/RAGService.ts';
 import { Message, RAGConfig, SearchResult, ChatResponse } from '../types/prompt.ts';
 
@@ -8,6 +8,7 @@ export function useRAGChat(baseUrl: string) {
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [config, setConfig] = useState<RAGConfig>(ragService.getConfig());
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const updateConfig = useCallback((updates: Partial<RAGConfig>) => {
@@ -45,11 +46,16 @@ export function useRAGChat(baseUrl: string) {
         searchResults = await ragService.searchVectors(content, baseUrl, controller.signal);
         setSearchResults(searchResults);
         
-        // 검색 결과와 함께 채팅
-        response = await ragService.chatWithRAG(content, baseUrl, searchResults, controller.signal);
+        // 검색 결과와 함께 채팅 (세션 ID 포함)
+        response = await ragService.chatWithRAG(content, baseUrl, searchResults, controller.signal, sessionId);
       } else {
-        // 직접 질문 모드
-        response = await ragService.askWithoutRAG(content, baseUrl, controller.signal);
+        // 직접 질문 모드 (세션 ID 포함)
+        response = await ragService.askWithoutRAG(content, baseUrl, controller.signal, sessionId);
+      }
+
+      // 세션 ID 업데이트 (응답에서 받은 세션 ID 사용)
+      if (response.sessionId) {
+        setSessionId(response.sessionId);
       }
 
       const assistantMessage: Message = {
@@ -58,7 +64,8 @@ export function useRAGChat(baseUrl: string) {
         timestamp: Date.now(),
         metadata: {
           ...response.metadata,
-          searchResults: mode === 'chat' ? searchResults : undefined
+          searchResults: mode === 'chat' ? searchResults : undefined,
+          sessionId: response.sessionId
         }
       };
 
@@ -77,12 +84,51 @@ export function useRAGChat(baseUrl: string) {
       }
       setLoading(false);
     }
-  }, [baseUrl, loading, ragService]);
+  }, [baseUrl, loading, ragService, sessionId]);
 
-  const clearMessages = useCallback(() => {
+  const clearMessages = useCallback(async () => {
     setMessages([]);
     setSearchResults([]);
-  }, []);
+    
+    // 서버의 히스토리도 삭제
+    if (sessionId) {
+      try {
+        await ragService.clearHistory(baseUrl, sessionId);
+      } catch (error) {
+        console.error('Failed to clear server history:', error);
+      }
+    }
+  }, [sessionId, baseUrl, ragService]);
+
+  // 히스토리 조회 기능
+  const loadHistory = useCallback(async () => {
+    if (!sessionId) return;
+    
+    try {
+      const history = await ragService.getHistory(baseUrl, sessionId);
+      // 서버 히스토리를 로컬 메시지로 변환
+      const historyMessages: Message[] = history.split('\n').filter(line => line.trim()).map(line => {
+        if (line.startsWith('사용자: ')) {
+          return {
+            role: 'user' as const,
+            content: line.replace('사용자: ', ''),
+            timestamp: Date.now()
+          };
+        } else if (line.startsWith('AI: ')) {
+          return {
+            role: 'assistant' as const,
+            content: line.replace('AI: ', ''),
+            timestamp: Date.now()
+          };
+        }
+        return null;
+      }).filter(Boolean) as Message[];
+      
+      setMessages(historyMessages);
+    } catch (error) {
+      console.error('Failed to load history:', error);
+    }
+  }, [sessionId, baseUrl, ragService]);
 
   const cancelRequest = useCallback(() => {
     abortRef.current?.abort();
@@ -106,8 +152,10 @@ export function useRAGChat(baseUrl: string) {
     loading,
     searchResults,
     config,
+    sessionId,
     sendMessage,
     clearMessages,
+    loadHistory,
     cancelRequest,
     updateConfig,
     evaluateSearchQuality,

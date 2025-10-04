@@ -42,6 +42,8 @@ export interface Message {
     tokens?: number;
     searchResults?: SearchResult[];
     promptTemplate?: string;
+    processingTime?: number;
+    sessionId?: string;
   };
   error?: boolean;
 }
@@ -56,6 +58,7 @@ export interface RAGConfig {
 
 export interface ChatResponse {
   content: string;
+  sessionId?: string;
   metadata: {
     model: string;
     tokens: number;
