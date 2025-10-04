@@ -1,13 +1,12 @@
 import React from "react";
 
-import { Section } from "../../shared/ui/Section.tsx";
 import { Textarea } from "../../shared/ui/Textarea.tsx";
 import { Button } from "../../shared/ui/Button.tsx";
 import { Input } from "../../shared/ui/Input.tsx";
 import { useScrollToBottom } from "../../shared/hooks/useScrollToBottom.ts";
 import { useRAGChat } from "../../shared/hooks/useRAGChat.ts";
 import { usePromptEngine } from "../../shared/hooks/usePromptEngine.ts";
-import { Message, Modes, ModeValue } from "./types.ts";
+import { Modes, ModeValue } from "./types.ts";
 
 export function ChatPanel({ base }: { base: string }) {
   const [input, setInput] = React.useState("");
@@ -24,7 +23,7 @@ export function ChatPanel({ base }: { base: string }) {
     cancelRequest,
     updateConfig,
     evaluateSearchQuality,
-    optimizeParameters
+    // optimizeParameters
   } = useRAGChat(base);
 
   const {
@@ -79,70 +78,107 @@ export function ChatPanel({ base }: { base: string }) {
   const promptValidation = validatePrompt(customPrompt);
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-4 p-8">
       <div className="lg:col-span-3">
-        <Section title="Enhanced Chat">
-          <div
-            ref={boxRef}
-            className="h-[420px] overflow-y-auto rounded-xl border bg-white p-4"
-            aria-live="polite"
-          >
-            {messages.length === 0 && (
-              <div className="text-sm text-gray-500">
-                No messages yet. Type below and send.
+        <div className="mb-6">
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent mb-2">
+            💬 AI Chat Interface
+          </h2>
+          <p className="text-gray-600">Experience intelligent conversations with advanced RAG capabilities</p>
+        </div>
+        
+        <div
+          ref={boxRef}
+          className="h-[500px] overflow-y-auto rounded-3xl border-2 border-gray-100 bg-gradient-to-b from-white to-gray-50 p-6 shadow-inner"
+          aria-live="polite"
+        >
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center mb-4">
+                <span className="text-2xl">🤖</span>
               </div>
-            )}
-            <div className="space-y-3">
-              {messages.map((m, i) => (
-                <div key={m.ts + i} className={m.role === "user" ? "text-right" : "text-left"}>
-                  <div
-                    className={`inline-block max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
-                      m.role === "user"
-                        ? "bg-blue-50"
-                        : m.error
-                        ? "bg-red-50"
-                        : "bg-gray-100"
-                    }`}
-                  >
-                    <div className="mb-1 text-[11px] uppercase tracking-wide opacity-60">
-                      {m.role}
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">Ready to chat!</h3>
+              <p className="text-gray-500 max-w-sm">
+                Start a conversation with our AI assistant. Ask questions, get insights, or explore topics with advanced RAG capabilities.
+              </p>
+            </div>
+          )}
+          <div className="space-y-4">
+            {messages.map((m, i) => (
+              <div key={m.ts + i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`flex items-start gap-3 max-w-[85%] ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                  {/* Avatar */}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                    m.role === "user" 
+                      ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white" 
+                      : "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                  }`}>
+                    {m.role === "user" ? "👤" : "🤖"}
+                  </div>
+                  
+                  {/* Message bubble */}
+                  <div className={`rounded-2xl px-4 py-3 shadow-sm ${
+                    m.role === "user"
+                      ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                      : m.error
+                      ? "bg-gradient-to-r from-red-100 to-red-50 border border-red-200 text-red-800"
+                      : "bg-white border border-gray-200 text-gray-800"
+                  }`}>
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                      {m.content}
                     </div>
-                    {m.content}
                     {m.metadata && (
-                      <div className="mt-2 text-xs text-gray-500">
-                        {m.metadata.tokens && `Tokens: ${m.metadata.tokens}`}
-                        {m.metadata.processingTime && ` | Time: ${m.metadata.processingTime}ms`}
-                        {m.metadata.searchResults && ` | Results: ${m.metadata.searchResults.length}`}
+                      <div className={`mt-2 text-xs flex flex-wrap gap-2 ${
+                        m.role === "user" ? "text-blue-100" : "text-gray-500"
+                      }`}>
+                        {m.metadata.tokens && (
+                          <span className="bg-white/20 px-2 py-1 rounded-full">
+                            📊 {m.metadata.tokens} tokens
+                          </span>
+                        )}
+                        {m.metadata.processingTime && (
+                          <span className="bg-white/20 px-2 py-1 rounded-full">
+                            ⏱️ {m.metadata.processingTime}ms
+                          </span>
+                        )}
+                        {m.metadata.searchResults && (
+                          <span className="bg-white/20 px-2 py-1 rounded-full">
+                            🔍 {m.metadata.searchResults.length} results
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
+        </div>
 
-          <form
-            className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-6"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void handleSend();
-            }}
-          >
-            <div className="md:col-span-5">
+        {/* Input Form */}
+        <form
+          className="mt-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-lg"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSend();
+          }}
+        >
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-6">
+            <div className="lg:col-span-4">
               <Textarea
                 value={input}
                 onChange={setInput}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask something…"
+                placeholder="Ask me anything... I'm powered by advanced RAG technology! 🚀"
                 rows={3}
                 disabled={loading}
-                aria-label="Message input"
+                className="text-lg py-4 px-6 rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200 resize-none"
               />
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="lg:col-span-2 flex flex-col gap-3">
               <select
-                className="rounded-xl border p-2 text-sm"
+                className="rounded-2xl border-2 border-gray-200 p-3 text-sm font-medium focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
                 value={mode}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -158,58 +194,120 @@ export function ChatPanel({ base }: { base: string }) {
                 ))}
               </select>
 
-              <Button type="submit" disabled={loading || !input.trim()}>
-                {loading ? "Sending…" : "Send"}
+              <Button 
+                type="submit" 
+                disabled={loading || !input.trim()}
+                variant="primary"
+                size="lg"
+                className="rounded-2xl font-semibold transition-all duration-200 hover:scale-105 disabled:hover:scale-100"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Sending...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    Send <span className="text-lg">🚀</span>
+                  </span>
+                )}
               </Button>
             </div>
-          </form>
-
-          <div className="mt-3 flex gap-2">
-            <Button onClick={clearMessages} variant="outline" size="sm">
-              Clear
-            </Button>
-            <Button 
-              onClick={() => setShowAdvanced(!showAdvanced)} 
-              variant="outline" 
-              size="sm"
-            >
-              {showAdvanced ? "Hide" : "Show"} Advanced
-            </Button>
           </div>
-        </Section>
+        </form>
+
+        {/* Action Buttons */}
+        <div className="mt-4 flex gap-3">
+          <Button 
+            onClick={clearMessages} 
+            variant="outline" 
+            size="md"
+            className="rounded-2xl font-medium transition-all duration-200 hover:scale-105"
+          >
+            🗑️ Clear Chat
+          </Button>
+          <Button 
+            onClick={() => setShowAdvanced(!showAdvanced)} 
+            variant="outline" 
+            size="md"
+            className="rounded-2xl font-medium transition-all duration-200 hover:scale-105"
+          >
+            {showAdvanced ? "🔽 Hide" : "🔧 Show"} Advanced
+          </Button>
+        </div>
       </div>
 
+      {/* Sidebar */}
       <div className="space-y-6">
-        <Section title="Debug Info">
-          <div className="space-y-2 text-xs text-gray-600">
-            <div>Base: <code className="rounded bg-gray-100 px-1">{base}</code></div>
-            <div>Mode: <code className="rounded bg-gray-100 px-1">{mode}</code></div>
-            <div>Messages: {messages.length}</div>
-            <div>Loading: <code className="rounded bg-gray-100 px-1">{String(loading)}</code></div>
+        {/* Status Panel */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-lg">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            📊 Status Dashboard
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-600">Connection</span>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-gray-500">Connected</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-600">Mode</span>
+              <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                {mode}
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-600">Messages</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                {messages.length}
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-600">Status</span>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                loading 
+                  ? 'bg-yellow-100 text-yellow-700' 
+                  : 'bg-green-100 text-green-700'
+              }`}>
+                {loading ? 'Processing...' : 'Ready'}
+              </span>
+            </div>
+            
             {searchResults.length > 0 && (
-              <div>
-                Search Quality: 
-                <span className={`ml-1 px-1 rounded text-white text-xs ${
-                  searchQuality.qualityRating === 'excellent' ? 'bg-green-500' :
-                  searchQuality.qualityRating === 'good' ? 'bg-blue-500' :
-                  searchQuality.qualityRating === 'fair' ? 'bg-yellow-500' :
-                  'bg-red-500'
-                }`}>
-                  {searchQuality.qualityRating}
-                </span>
+              <div className="pt-2 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">Search Quality</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
+                    searchQuality.qualityRating === 'excellent' ? 'bg-green-500' :
+                    searchQuality.qualityRating === 'good' ? 'bg-blue-500' :
+                    searchQuality.qualityRating === 'fair' ? 'bg-yellow-500' :
+                    'bg-red-500'
+                  }`}>
+                    {searchQuality.qualityRating}
+                  </span>
+                </div>
               </div>
             )}
           </div>
-        </Section>
+        </div>
 
         {showAdvanced && (
           <>
-            <Section title="Prompt Settings">
-              <div className="space-y-3">
+            {/* Prompt Settings */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-lg">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                🧠 Prompt Settings
+              </h3>
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Template</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">Template</label>
                   <select
-                    className="w-full rounded-xl border p-2 text-sm"
+                    className="w-full rounded-2xl border-2 border-gray-200 p-3 text-sm font-medium focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
                     value={selectedTemplate}
                     onChange={(e) => setSelectedTemplate(e.target.value)}
                   >
@@ -222,37 +320,44 @@ export function ChatPanel({ base }: { base: string }) {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Custom Prompt</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">Custom Prompt</label>
                   <Textarea
                     value={customPrompt}
                     onChange={setCustomPrompt}
+                    onKeyDown={() => {}}
                     placeholder="Override template with custom prompt..."
                     rows={3}
+                    className="rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
                   />
                   {customPrompt && !promptValidation.valid && (
-                    <div className="mt-1 text-xs text-red-600">
+                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600">
                       {promptValidation.errors.join(', ')}
                     </div>
                   )}
                 </div>
               </div>
-            </Section>
+            </div>
 
-            <Section title="RAG Config">
-              <div className="space-y-3">
+            {/* RAG Configuration */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-lg">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                ⚙️ RAG Configuration
+              </h3>
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Top K</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">Top K Results</label>
                   <Input
                     type="number"
                     value={config.topK.toString()}
                     onChange={(value) => updateConfig({ topK: parseInt(value) || 10 })}
                     min="1"
                     max="50"
+                    className="rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Threshold</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">Similarity Threshold</label>
                   <Input
                     type="number"
                     value={config.threshold.toString()}
@@ -260,11 +365,12 @@ export function ChatPanel({ base }: { base: string }) {
                     min="0"
                     max="1"
                     step="0.1"
+                    className="rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Temperature</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">Temperature</label>
                   <Input
                     type="number"
                     value={config.temperature.toString()}
@@ -272,28 +378,41 @@ export function ChatPanel({ base }: { base: string }) {
                     min="0"
                     max="2"
                     step="0.1"
+                    className="rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
                   />
                 </div>
               </div>
-            </Section>
+            </div>
 
+            {/* Search Results */}
             {searchResults.length > 0 && (
-              <Section title="Search Results">
-                <div className="space-y-2">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 p-6 shadow-lg">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  🔍 Search Results
+                </h3>
+                <div className="space-y-3">
                   {searchResults.slice(0, 3).map((result, i) => (
-                    <div key={i} className="rounded border p-2 text-xs">
-                      <div className="font-medium">#{result.id}</div>
-                      <div className="text-gray-600 line-clamp-2">{result.content}</div>
-                      <div className="text-gray-500">Score: {result.score?.toFixed(3)}</div>
+                    <div key={i} className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold text-sm text-gray-800">#{result.id}</span>
+                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                          {result.score?.toFixed(3)}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                        {result.content}
+                      </div>
                     </div>
                   ))}
                   {searchResults.length > 3 && (
-                    <div className="text-xs text-gray-500">
-                      +{searchResults.length - 3} more results
+                    <div className="text-center">
+                      <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                        +{searchResults.length - 3} more results
+                      </span>
                     </div>
                   )}
                 </div>
-              </Section>
+              </div>
             )}
           </>
         )}

@@ -64,3 +64,4 @@ export interface ChatResponse {
     processingTime?: number;
   };
 }
+
