@@ -89,10 +89,15 @@ export function EnhancedChatPanel({ base }: { base: string }) {
     console.log('Document uploaded:', document);
   };
 
-  // Validate prompt only when needed
+  // Validate prompt only when needed (safe rendering)
   const getPromptValidation = () => {
-    if (!customPrompt.trim()) return null;
-    return validatePrompt(customPrompt);
+    if (!customPrompt || !customPrompt.trim()) return null;
+    try {
+      return validatePrompt(customPrompt);
+    } catch (error) {
+      console.error('Validation error:', error);
+      return null;
+    }
   };
 
   return (

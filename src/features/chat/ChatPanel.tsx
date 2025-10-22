@@ -81,8 +81,11 @@ export function ChatPanel({ base }: { base: string }) {
     }
   };
 
-  const searchQuality = evaluateSearchQuality();
-  const promptValidation = validatePrompt(customPrompt);
+  // Validate prompt only when needed
+  const getPromptValidation = () => {
+    if (!customPrompt.trim()) return null;
+    return validatePrompt(customPrompt);
+  };
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-4 p-8">
@@ -352,11 +355,17 @@ export function ChatPanel({ base }: { base: string }) {
                     rows={3}
                     className="rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
                   />
-                  {promptValidation && !promptValidation.valid && (
-                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600">
-                      {promptValidation.errors?.join(', ') || '유효하지 않은 프롬프트입니다.'}
-                    </div>
-                  )}
+                  {(() => {
+                    const validation = getPromptValidation();
+                    if (validation && !validation.valid) {
+                      return (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600">
+                          {validation.errors?.join(', ') || '유효하지 않은 프롬프트입니다.'}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
             </div>
