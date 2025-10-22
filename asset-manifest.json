@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/llm-rag-app/static/css/main.3e304c71.css",
+    "main.js": "/llm-rag-app/static/js/main.ca4e8a73.js",
+    "static/js/453.36ce10ad.chunk.js": "/llm-rag-app/static/js/453.36ce10ad.chunk.js",
+    "index.html": "/llm-rag-app/index.html",
+    "main.3e304c71.css.map": "/llm-rag-app/static/css/main.3e304c71.css.map",
+    "main.ca4e8a73.js.map": "/llm-rag-app/static/js/main.ca4e8a73.js.map",
+    "453.36ce10ad.chunk.js.map": "/llm-rag-app/static/js/453.36ce10ad.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.3e304c71.css",
+    "static/js/main.ca4e8a73.js"
+  ]
+}
