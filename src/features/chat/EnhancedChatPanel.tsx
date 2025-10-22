@@ -89,8 +89,11 @@ export function EnhancedChatPanel({ base }: { base: string }) {
     console.log('Document uploaded:', document);
   };
 
-  const searchQuality = evaluateSearchQuality();
-  const promptValidation = validatePrompt(customPrompt);
+  // Validate prompt only when needed
+  const getPromptValidation = () => {
+    if (!customPrompt.trim()) return null;
+    return validatePrompt(customPrompt);
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -214,11 +217,17 @@ export function EnhancedChatPanel({ base }: { base: string }) {
                       className="w-full text-xs"
                       rows={3}
                     />
-                    {promptValidation && !promptValidation.valid && (
-                      <div className="text-xs text-red-600">
-                        {promptValidation.errors?.join(', ') || '유효하지 않은 프롬프트입니다.'}
-                      </div>
-                    )}
+                    {(() => {
+                      const validation = getPromptValidation();
+                      if (validation && !validation.valid) {
+                        return (
+                          <div className="text-xs text-red-600">
+                            {validation.errors?.join(', ') || '유효하지 않은 프롬프트입니다.'}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
               )}
