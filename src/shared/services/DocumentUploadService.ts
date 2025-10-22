@@ -1,4 +1,4 @@
-// import { http } from '../api/http.ts';
+// Native fetch implementation - no http dependency
 
 export interface DocumentUploadRequest {
   title: string;
@@ -29,6 +29,12 @@ export interface DocumentInfo {
 }
 
 export class DocumentUploadService {
+  private baseUrl: string = 'https://llm-rag-api-a8768292f672.herokuapp.com/api';
+
+  setBaseUrl(url: string) {
+    this.baseUrl = url;
+  }
+
   async uploadDocument(
     file: File, 
     request: DocumentUploadRequest, 
@@ -44,49 +50,75 @@ export class DocumentUploadService {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await http.post('/documents/upload', formData, {
-      headers: {
-        ...headers,
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress && progressEvent.total) {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(progress);
-        }
-      },
+    const response = await fetch(`${this.baseUrl}/documents/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
     });
 
-    return response.data;
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.status}`);
+    }
+
+    return response.json();
   }
 
   async getUserDocuments(sessionId: string): Promise<DocumentInfo[]> {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
     if (sessionId) {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await http.get('/documents', { headers });
-    return response.data;
+    const response = await fetch(`${this.baseUrl}/documents`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Get documents failed: ${response.status}`);
+    }
+
+    return response.json();
   }
 
   async getDocument(documentId: string, sessionId: string): Promise<DocumentInfo> {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
     if (sessionId) {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await http.get(`/documents/${documentId}`, { headers });
-    return response.data;
+    const response = await fetch(`${this.baseUrl}/documents/${documentId}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Get document failed: ${response.status}`);
+    }
+
+    return response.json();
   }
 
   async deleteDocument(documentId: string, sessionId: string): Promise<void> {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
     if (sessionId) {
       headers['X-Session-ID'] = sessionId;
     }
 
-    await http.delete(`/documents/${documentId}`, { headers });
+    const response = await fetch(`${this.baseUrl}/documents/${documentId}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Delete document failed: ${response.status}`);
+    }
   }
 }
 
