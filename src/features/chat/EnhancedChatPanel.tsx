@@ -37,7 +37,7 @@ export function EnhancedChatPanel({ base }: { base: string }) {
     setCustomPrompt,
     getTemplates,
     renderPrompt,
-    validatePrompt
+    // validatePrompt - not used to avoid object rendering issues
   } = usePromptEngine();
 
   const boxRef = useScrollToBottom([messages]);
@@ -89,16 +89,7 @@ export function EnhancedChatPanel({ base }: { base: string }) {
     console.log('Document uploaded:', document);
   };
 
-  // Validate prompt only when needed (safe rendering)
-  const getPromptValidation = () => {
-    if (!customPrompt || !customPrompt.trim()) return null;
-    try {
-      return validatePrompt(customPrompt);
-    } catch (error) {
-      console.error('Validation error:', error);
-      return null;
-    }
-  };
+  // Removed prompt validation to avoid production build issues
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -222,17 +213,7 @@ export function EnhancedChatPanel({ base }: { base: string }) {
                       className="w-full text-xs"
                       rows={3}
                     />
-                    {(() => {
-                      const validation = getPromptValidation();
-                      if (validation && !validation.valid) {
-                        return (
-                          <div className="text-xs text-red-600">
-                            {validation.errors?.join(', ') || '유효하지 않은 프롬프트입니다.'}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
+                    {/* Validation removed to fix production build issue */}
                   </div>
                 </div>
               )}
