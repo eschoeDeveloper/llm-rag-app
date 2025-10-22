@@ -352,9 +352,9 @@ export function ChatPanel({ base }: { base: string }) {
                     rows={3}
                     className="rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
                   />
-                  {customPrompt && !promptValidation.valid && (
+                  {promptValidation && !promptValidation.valid && (
                     <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600">
-                      {promptValidation.errors.join(', ')}
+                      {promptValidation.errors?.join(', ') || '유효하지 않은 프롬프트입니다.'}
                     </div>
                   )}
                 </div>
