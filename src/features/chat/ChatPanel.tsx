@@ -7,11 +7,16 @@ import { useScrollToBottom } from "../../shared/hooks/useScrollToBottom.ts";
 import { useRAGChat } from "../../shared/hooks/useRAGChat.ts";
 import { usePromptEngine } from "../../shared/hooks/usePromptEngine.ts";
 import { Modes, ModeValue } from "./types.ts";
+import { AdvancedSearchPanel } from "../search/AdvancedSearchPanel";
+import { ConversationThreadPanel } from "../conversation/ConversationThreadPanel";
+import { DocumentUploadPanel } from "../document/DocumentUploadPanel";
 
 export function ChatPanel({ base }: { base: string }) {
   const [input, setInput] = React.useState("");
   const [mode, setMode] = React.useState<ModeValue>("ask");
   const [showAdvanced, setShowAdvanced] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<'chat' | 'search' | 'threads' | 'documents'>('chat');
+  const [error, setError] = React.useState<string | null>(null);
 
   const {
     messages,

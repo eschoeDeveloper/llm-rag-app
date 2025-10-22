@@ -1,6 +1,6 @@
 import React from "react";
 
-import { ChatPanel } from "./features/chat/ChatPanel.tsx";
+import { EnhancedChatPanel } from "./features/chat/EnhancedChatPanel.tsx";
 import { VectorPanel } from "./features/vector/VectorPanel.tsx";
 import { Input } from "./shared/ui/Input.tsx";
 import { Button } from "./shared/ui/Button.tsx";
@@ -101,7 +101,7 @@ export default function AppPrompt() {
 
         {/* Main Content */}
         <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-          {tab === "chat" ? <ChatPanel base={base} /> : <VectorPanel base={base} />}
+          {tab === "chat" ? <EnhancedChatPanel base={base} /> : <VectorPanel base={base} />}
         </div>
 
         {/* Enhanced Footer */}
