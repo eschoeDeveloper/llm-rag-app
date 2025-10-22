@@ -2,13 +2,18 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { RAGService } from '../services/RAGService.ts';
 import { Message, RAGConfig, SearchResult, ChatResponse } from '../types/prompt.ts';
 
+// 세션 ID 생성 함수
+const generateSessionId = () => {
+  return `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+};
+
 export function useRAGChat(baseUrl: string) {
   const [ragService] = useState(() => RAGService.getInstance());
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [config, setConfig] = useState<RAGConfig>(ragService.getConfig());
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string>(() => generateSessionId()); // 초기값으로 세션 ID 생성
   const abortRef = useRef<AbortController | null>(null);
 
   const updateConfig = useCallback((updates: Partial<RAGConfig>) => {
@@ -98,6 +103,9 @@ export function useRAGChat(baseUrl: string) {
         console.error('Failed to clear server history:', error);
       }
     }
+    
+    // 새로운 세션 ID 생성
+    setSessionId(generateSessionId());
   }, [sessionId, baseUrl, ragService]);
 
   // 히스토리 조회 기능
