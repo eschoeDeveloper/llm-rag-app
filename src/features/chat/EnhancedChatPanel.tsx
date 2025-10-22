@@ -1,7 +1,6 @@
 import React from "react";
 import { Textarea } from "../../shared/ui/Textarea.tsx";
 import { Button } from "../../shared/ui/Button.tsx";
-import { Input } from "../../shared/ui/Input.tsx";
 import { useScrollToBottom } from "../../shared/hooks/useScrollToBottom.ts";
 import { useRAGChat } from "../../shared/hooks/useRAGChat.ts";
 import { usePromptEngine } from "../../shared/hooks/usePromptEngine.ts";
@@ -169,21 +168,21 @@ export function EnhancedChatPanel({ base }: { base: string }) {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <label className="text-xs text-gray-600">Top K</label>
-                        <Input
+                        <input
                           type="number"
                           value={config.topK}
                           onChange={(e) => updateConfig({ topK: parseInt(e.target.value) || 5 })}
-                          className="w-16 text-xs"
+                          className="w-16 text-xs border rounded px-2 py-1"
                         />
                       </div>
                       <div className="flex items-center justify-between">
                         <label className="text-xs text-gray-600">Threshold</label>
-                        <Input
+                        <input
                           type="number"
                           step="0.1"
                           value={config.threshold}
                           onChange={(e) => updateConfig({ threshold: parseFloat(e.target.value) || 0.7 })}
-                          className="w-16 text-xs"
+                          className="w-16 text-xs border rounded px-2 py-1"
                         />
                       </div>
                     </div>
@@ -210,7 +209,7 @@ export function EnhancedChatPanel({ base }: { base: string }) {
                     <label className="block text-sm font-medium text-gray-700">커스텀 프롬프트</label>
                     <Textarea
                       value={customPrompt}
-                      onChange={(e) => setCustomPrompt(e.target.value)}
+                      onChange={setCustomPrompt}
                       placeholder="커스텀 프롬프트를 입력하세요..."
                       className="w-full text-xs"
                       rows={3}
@@ -400,7 +399,7 @@ export function EnhancedChatPanel({ base }: { base: string }) {
             <div className="flex-1">
               <Textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={setInput}
                 onKeyDown={handleKeyDown}
                 placeholder={
                   mode === "ask"

@@ -171,19 +171,19 @@ export const DocumentUploadPanel: React.FC<DocumentUploadPanelProps> = ({
         <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
           <Input
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={setTitle}
             placeholder="문서 제목"
             className="w-full"
           />
           <Input
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
             placeholder="문서 설명 (선택사항)"
             className="w-full"
           />
           <Input
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={setCategory}
             placeholder="카테고리 (선택사항)"
             className="w-full"
           />

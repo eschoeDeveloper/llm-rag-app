@@ -80,7 +80,7 @@ export const AdvancedSearchPanel: React.FC<AdvancedSearchPanelProps> = ({
         <div className="flex space-x-2">
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={setQuery}
             placeholder="검색어를 입력하세요..."
             className="flex-1"
           />

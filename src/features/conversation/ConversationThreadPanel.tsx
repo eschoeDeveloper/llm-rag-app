@@ -97,13 +97,13 @@ export const ConversationThreadPanel: React.FC<ConversationThreadPanelProps> = (
         <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
           <Input
             value={newThreadTitle}
-            onChange={(e) => setNewThreadTitle(e.target.value)}
+            onChange={setNewThreadTitle}
             placeholder="스레드 제목"
             className="w-full"
           />
           <Input
             value={newThreadDescription}
-            onChange={(e) => setNewThreadDescription(e.target.value)}
+            onChange={setNewThreadDescription}
             placeholder="스레드 설명 (선택사항)"
             className="w-full"
           />
