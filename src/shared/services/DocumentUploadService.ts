@@ -57,10 +57,24 @@ export class DocumentUploadService {
     });
 
     if (!response.ok) {
-      throw new Error(`Upload failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Upload error response:', errorText);
+      throw new Error(`Upload failed: ${response.status} - ${errorText}`);
     }
 
-    return response.json();
+    const text = await response.text();
+    console.log('Upload response text:', text);
+    
+    if (!text || text.trim() === '') {
+      throw new Error('Empty response from server');
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error('Failed to parse JSON:', text);
+      throw new Error(`Invalid JSON response: ${text}`);
+    }
   }
 
   async getUserDocuments(sessionId: string): Promise<DocumentInfo[]> {
