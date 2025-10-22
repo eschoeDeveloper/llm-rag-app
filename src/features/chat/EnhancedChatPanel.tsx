@@ -214,9 +214,9 @@ export function EnhancedChatPanel({ base }: { base: string }) {
                       className="w-full text-xs"
                       rows={3}
                     />
-                    {promptValidation && (
+                    {promptValidation && !promptValidation.valid && (
                       <div className="text-xs text-red-600">
-                        {promptValidation}
+                        {promptValidation.errors?.join(', ') || '유효하지 않은 프롬프트입니다.'}
                       </div>
                     )}
                   </div>
