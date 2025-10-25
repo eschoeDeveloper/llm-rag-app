@@ -3,6 +3,7 @@ import { RAGConfig, SearchResult, ChatResponse } from '../types/prompt.ts';
 export class RAGService {
   private static instance: RAGService;
   private config: RAGConfig;
+  private baseUrl: string = '/api';
 
   static getInstance(): RAGService {
     if (!RAGService.instance) {
@@ -14,7 +15,7 @@ export class RAGService {
   constructor() {
     this.config = {
       topK: 10,
-      threshold: 0.7,
+      threshold: 0.1,
       maxTokens: 4000,
       temperature: 0.7,
       searchMode: 'similarity'
@@ -31,11 +32,12 @@ export class RAGService {
 
   async searchVectors(
     query: string, 
-    baseUrl: string, 
+    baseUrl?: string, 
     signal?: AbortSignal
   ): Promise<SearchResult[]> {
     try {
-      const response = await fetch(`${baseUrl}/embeddings/search`, {
+      const url = baseUrl || this.baseUrl;
+      const response = await fetch(`${url}/embeddings/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -51,7 +53,12 @@ export class RAGService {
       }
 
       const data = await response.json();
-      return this.processSearchResults(data);
+      // SearchResponse 형식 처리
+      if (data.results && Array.isArray(data.results)) {
+        return this.processSearchResults(data.results);
+      } else {
+        return this.processSearchResults(data);
+      }
     } catch (error) {
       console.error('Vector search error:', error);
       throw error;
@@ -68,12 +75,13 @@ export class RAGService {
     const startTime = Date.now();
     
     try {
+      const url = baseUrl || this.baseUrl;
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {
         headers['X-Session-ID'] = sessionId;
       }
 
-      const response = await fetch(`${baseUrl}/chat`, {
+      const response = await fetch(`${url}/chat`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -118,12 +126,13 @@ export class RAGService {
     const startTime = Date.now();
     
     try {
+      const url = baseUrl || this.baseUrl;
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {
         headers['X-Session-ID'] = sessionId;
       }
 
-      const response = await fetch(`${baseUrl}/ask`, {
+      const response = await fetch(`${url}/ask`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -217,7 +226,7 @@ export class RAGService {
       // 검색 파라미터 조정
       return {
         topK: Math.min(this.config.topK + 5, 20),
-        threshold: Math.max(this.config.threshold - 0.1, 0.3)
+        threshold: Math.max(this.config.threshold - 0.1, 0.1)
       };
     }
 

@@ -7,12 +7,19 @@ import { Button } from "./shared/ui/Button.tsx";
 import { Chip } from "./shared/ui/Chip.tsx";
 import { useLocalStorage } from "./shared/hooks/useLocalStorage.ts";
 
-const DEFAULT_BASE = process.env.REACT_APP_API_BASE || "https://llm-rag-api-a8768292f672.herokuapp.com/api";
+const DEFAULT_BASE = import.meta.env.VITE_API_BASE || "/api";
 type Tab = "chat" | "vector";
 
 export default function AppPrompt() {
   const [base, setBase] = useLocalStorage("apiBase", DEFAULT_BASE);
   const [tab, setTab] = React.useState("chat" as Tab);
+
+  // 로컬 스토리지 강제 리셋 (개발용)
+  React.useEffect(() => {
+    if (base && base.includes('herokuapp.com')) {
+      setBase(DEFAULT_BASE);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">

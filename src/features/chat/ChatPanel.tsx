@@ -111,7 +111,7 @@ export function ChatPanel({ base }: { base: string }) {
           )}
           <div className="space-y-4">
             {messages.map((m, i) => (
-              <div key={m.ts + i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div key={m.ts ? `${m.ts}-${i}` : `message-${i}`} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className={`flex items-start gap-3 max-w-[85%] ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                   {/* Avatar */}
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
@@ -379,7 +379,7 @@ export function ChatPanel({ base }: { base: string }) {
                   <Input
                     type="number"
                     value={config.threshold.toString()}
-                    onChange={(value) => updateConfig({ threshold: parseFloat(value) || 0.7 })}
+                    onChange={(value) => updateConfig({ threshold: parseFloat(value) || 0.1 })}
                     min="0"
                     max="1"
                     step="0.1"
@@ -418,7 +418,7 @@ export function ChatPanel({ base }: { base: string }) {
                         </span>
                       </div>
                       <div className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                        {result.content}
+                        {typeof result.content === 'string' ? result.content : JSON.stringify(result.content)}
                       </div>
                     </div>
                   ))}

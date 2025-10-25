@@ -1,4 +1,4 @@
-// import { http } from '../api/http.ts';
+import { postJson, getJson, putJson, deleteJson } from '../api/http.ts';
 
 export interface ConversationThread {
   id: string;
@@ -35,24 +35,34 @@ export interface UpdateTitleRequest {
 }
 
 export class ConversationThreadService {
+  private baseUrl: string = '/api';
+
+  setBaseUrl(url: string) {
+    this.baseUrl = url;
+  }
+
   async createThread(request: CreateThreadRequest, sessionId: string): Promise<ConversationThread> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (sessionId) {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await http.post('/threads', request, { headers });
-    return response.data;
+    const response = await fetch(`${this.baseUrl}/threads`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+    }
+
+    return await response.json();
   }
 
   async getThread(threadId: string, sessionId: string): Promise<ConversationThread> {
-    const headers: Record<string, string> = {};
-    if (sessionId) {
-      headers['X-Session-ID'] = sessionId;
-    }
-
-    const response = await http.get(`/threads/${threadId}`, { headers });
-    return response.data;
+    const response = await getJson<ConversationThread>(`${this.baseUrl}/threads/${threadId}`);
+    return response;
   }
 
   async getUserThreads(sessionId: string): Promise<ConversationThread[]> {
@@ -61,8 +71,16 @@ export class ConversationThreadService {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await http.get('/threads', { headers });
-    return response.data;
+    const response = await fetch(`${this.baseUrl}/threads`, {
+      method: 'GET',
+      headers
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+    }
+
+    return await response.json();
   }
 
   async addMessage(threadId: string, request: AddMessageRequest, sessionId: string): Promise<ConversationThread> {
@@ -71,36 +89,30 @@ export class ConversationThreadService {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await http.post(`/threads/${threadId}/messages`, request, { headers });
-    return response.data;
+    const response = await fetch(`${this.baseUrl}/threads/${threadId}/messages`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+    }
+
+    return await response.json();
   }
 
   async updateThreadTitle(threadId: string, request: UpdateTitleRequest, sessionId: string): Promise<ConversationThread> {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (sessionId) {
-      headers['X-Session-ID'] = sessionId;
-    }
-
-    const response = await http.put(`/threads/${threadId}/title`, request, { headers });
-    return response.data;
+    const response = await putJson<ConversationThread>(`${this.baseUrl}/threads/${threadId}/title`, request);
+    return response;
   }
 
   async archiveThread(threadId: string, sessionId: string): Promise<void> {
-    const headers: Record<string, string> = {};
-    if (sessionId) {
-      headers['X-Session-ID'] = sessionId;
-    }
-
-    await http.post(`/threads/${threadId}/archive`, {}, { headers });
+    await postJson<void>(`${this.baseUrl}/threads/${threadId}/archive`, {});
   }
 
   async deleteThread(threadId: string, sessionId: string): Promise<void> {
-    const headers: Record<string, string> = {};
-    if (sessionId) {
-      headers['X-Session-ID'] = sessionId;
-    }
-
-    await http.delete(`/threads/${threadId}`, { headers });
+    await deleteJson<void>(`${this.baseUrl}/threads/${threadId}`);
   }
 }
 

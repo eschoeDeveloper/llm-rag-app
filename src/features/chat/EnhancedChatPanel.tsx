@@ -8,6 +8,8 @@ import { Modes, ModeValue } from "./types.ts";
 import { AdvancedSearchPanel } from "../search/AdvancedSearchPanel.tsx";
 import { ConversationThreadPanel } from "../conversation/ConversationThreadPanel.tsx";
 import { DocumentUploadPanel } from "../document/DocumentUploadPanel.tsx";
+import { conversationThreadService } from "../../shared/services/ConversationThreadService.ts";
+import { RAGService } from "../../shared/services/RAGService.ts";
 
 export function EnhancedChatPanel({ base }: { base: string }) {
   const [input, setInput] = React.useState("");
@@ -15,9 +17,14 @@ export function EnhancedChatPanel({ base }: { base: string }) {
   const [showAdvanced, setShowAdvanced] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<'chat' | 'search' | 'threads' | 'documents'>('chat');
   const [error, setError] = React.useState<string | null>(null);
+  const [activeThread, setActiveThread] = React.useState<any>(null);
+  
+  // RAG 서비스 인스턴스
+  const ragService = React.useMemo(() => RAGService.getInstance(), []);
 
   const {
     messages,
+    setMessages,
     loading,
     searchResults,
     config,
@@ -61,7 +68,64 @@ export function EnhancedChatPanel({ base }: { base: string }) {
     setInput("");
 
     try {
-      await sendMessage(message, mode);
+      if (activeThread && sessionId) {
+        // 스레드 모드: 로컬 상태만 사용 (임시 해결책)
+        console.log('Using thread mode - Thread ID:', activeThread.id);
+        
+        // 1. 사용자 메시지를 스레드에 저장
+        await conversationThreadService.addMessage(activeThread.id, {
+          content: message,
+          role: 'USER'
+        }, sessionId);
+        
+        // 2. LLM API 호출
+        const response = await fetch('/api/ask', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            query: message,
+            provider: 'openai',
+            model: 'gpt-4o-mini'
+          })
+        });
+        
+        if (response.ok) {
+          const responseText = await response.text();
+          
+          // 3. 어시스턴트 메시지를 스레드에 저장
+          await conversationThreadService.addMessage(activeThread.id, {
+            content: responseText || '응답을 받을 수 없습니다.',
+            role: 'ASSISTANT'
+          }, sessionId);
+        } else {
+          // 오류 메시지를 스레드에 저장
+          await conversationThreadService.addMessage(activeThread.id, {
+            content: '죄송합니다. 응답을 생성하는 중 오류가 발생했습니다.',
+            role: 'ASSISTANT'
+          }, sessionId);
+        }
+        
+        // 4. 스레드에서 메시지 다시 로드하여 화면에 표시
+        const updatedThread = await conversationThreadService.getThread(activeThread.id, sessionId);
+        if (updatedThread && updatedThread.messages) {
+          const loadedMessages = updatedThread.messages.map((msg: any) => ({
+            role: msg.role.toLowerCase(),
+            content: msg.content,
+            timestamp: msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now()
+          }));
+          setMessages(loadedMessages);
+        }
+        
+        // 5. 스레드 목록 새로고침 (메시지 개수 업데이트)
+        refreshThreads();
+        
+      } else {
+        // 일반 채팅 모드
+        console.log('Using normal chat mode');
+        await sendMessage(message, mode);
+      }
     } catch (error) {
       setError('메시지 전송 중 오류가 발생했습니다: ' + (error as Error).message);
     }
@@ -79,14 +143,50 @@ export function EnhancedChatPanel({ base }: { base: string }) {
     console.log('Search results:', results);
   };
 
-  const handleThreadSelect = (thread: any) => {
-    // 선택된 스레드의 메시지들을 채팅에 로드하는 로직
-    console.log('Selected thread:', thread);
+  const handleThreadSelect = async (thread: any) => {
+    try {
+      console.log('Selected thread:', thread);
+      
+      // 이미 같은 스레드가 선택되어 있다면 메시지 로드 생략
+      if (activeThread && activeThread.id === thread.id) {
+        console.log('Same thread already selected, skipping message reload');
+        return;
+      }
+      
+      // 활성 스레드 설정
+      setActiveThread(thread);
+      
+      // 스레드의 메시지들을 채팅에 로드
+      if (thread.messages && thread.messages.length > 0) {
+        const loadedMessages = thread.messages.map((msg: any) => ({
+          role: msg.role.toLowerCase(),
+          content: msg.content,
+          timestamp: msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now()
+        }));
+        
+        setMessages(loadedMessages);
+        console.log('Loaded messages:', loadedMessages.length);
+      } else {
+        // 메시지가 없는 경우 빈 배열로 초기화
+        setMessages([]);
+        console.log('No messages in thread');
+      }
+    } catch (error) {
+      console.error('Error loading thread messages:', error);
+      setError('스레드 메시지를 불러오는 중 오류가 발생했습니다.');
+    }
   };
 
   const handleDocumentUpload = (document: any) => {
     // 업로드된 문서 정보를 표시하는 로직
     console.log('Document uploaded:', document);
+  };
+
+  const [threadsRefreshKey, setThreadsRefreshKey] = React.useState(0);
+  
+  const refreshThreads = () => {
+    console.log('Refreshing threads, current key:', threadsRefreshKey);
+    setThreadsRefreshKey(prev => prev + 1);
   };
 
   // Removed prompt validation to avoid production build issues
@@ -180,7 +280,7 @@ export function EnhancedChatPanel({ base }: { base: string }) {
                           type="number"
                           step="0.1"
                           value={config.threshold}
-                          onChange={(e) => updateConfig({ threshold: parseFloat(e.target.value) || 0.7 })}
+                          onChange={(e) => updateConfig({ threshold: parseFloat(e.target.value) || 0.1 })}
                           className="w-16 text-xs border rounded px-2 py-1"
                         />
                       </div>
@@ -209,6 +309,7 @@ export function EnhancedChatPanel({ base }: { base: string }) {
                     <Textarea
                       value={customPrompt}
                       onChange={setCustomPrompt}
+                      onKeyDown={() => {}}
                       placeholder="커스텀 프롬프트를 입력하세요..."
                       className="w-full text-xs"
                       rows={3}
@@ -261,11 +362,28 @@ export function EnhancedChatPanel({ base }: { base: string }) {
           )}
 
           {activeTab === 'threads' && (
-            <ConversationThreadPanel
-              sessionId={sessionId}
-              onThreadSelect={handleThreadSelect}
-              onError={setError}
-            />
+            <div>
+              <div className="mb-2 text-xs text-gray-500">
+                Session ID: {sessionId}
+              </div>
+              <ConversationThreadPanel
+                key={threadsRefreshKey}
+                sessionId={sessionId}
+                onThreadSelect={handleThreadSelect}
+                onError={setError}
+                refreshKey={threadsRefreshKey}
+              />
+              <div className="mt-4">
+                <Button
+                  onClick={refreshThreads}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  🔄 스레드 목록 새로고침
+                </Button>
+              </div>
+            </div>
           )}
 
           {activeTab === 'documents' && (
@@ -324,7 +442,7 @@ export function EnhancedChatPanel({ base }: { base: string }) {
           )}
           
           {messages.map((m, i) => (
-            <div key={m.ts + i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div key={m.timestamp ? `${m.timestamp}-${i}` : `message-${i}`} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`flex items-start gap-3 max-w-[85%] ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                 {/* Avatar */}
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
@@ -362,7 +480,7 @@ export function EnhancedChatPanel({ base }: { base: string }) {
                       )}
                       {m.metadata.searchResults && (
                         <span className="bg-white/20 px-2 py-1 rounded-full">
-                          🔍 {m.metadata.searchResults} results
+                          🔍 {m.metadata.searchResults.length} results
                         </span>
                       )}
                     </div>

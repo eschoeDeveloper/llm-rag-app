@@ -29,7 +29,7 @@ export interface DocumentInfo {
 }
 
 export class DocumentUploadService {
-  private baseUrl: string = 'https://llm-rag-api-a8768292f672.herokuapp.com/api';
+  private baseUrl: string = '/api';
 
   setBaseUrl(url: string) {
     this.baseUrl = url;

@@ -71,7 +71,7 @@ export function VectorPanel({ base }: { base: string }) {
             {results.map((r, i) => (
               <div key={i} className="rounded-xl border p-3">
                 <div className="text-sm font-medium">#{r.id} {r.title || "(no title)"}</div>
-                <div className="text-xs text-gray-600 line-clamp-3">{r.content}</div>
+                <div className="text-xs text-gray-600 line-clamp-3">{typeof r.content === 'string' ? r.content : JSON.stringify(r.content)}</div>
                 <div className="mt-1 text-[11px] text-gray-500">created_at: {r.created_at}</div>
               </div>
             ))}

@@ -7,14 +7,36 @@ const generateSessionId = () => {
   return `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 };
 
-export function useRAGChat(baseUrl: string) {
+// localStorage에서 세션 ID를 가져오거나 새로 생성
+const getOrCreateSessionId = () => {
+  const stored = localStorage.getItem('rag_session_id');
+  if (stored) {
+    return stored;
+  }
+  const newSessionId = generateSessionId();
+  localStorage.setItem('rag_session_id', newSessionId);
+  return newSessionId;
+};
+
+export function useRAGChat(baseUrl?: string) {
   const [ragService] = useState(() => RAGService.getInstance());
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [config, setConfig] = useState<RAGConfig>(ragService.getConfig());
-  const [sessionId, setSessionId] = useState<string>(() => generateSessionId()); // 초기값으로 세션 ID 생성
+  const [sessionId, setSessionId] = useState<string>(() => getOrCreateSessionId()); // localStorage에서 세션 ID 가져오기
   const abortRef = useRef<AbortController | null>(null);
+  
+  // 세션 ID가 변경되었을 때 localStorage에 저장
+  useEffect(() => {
+    if (sessionId) {
+      localStorage.setItem('rag_session_id', sessionId);
+      console.log('Session ID updated:', sessionId);
+    }
+  }, [sessionId]);
+  
+  // baseUrl이 없으면 기본값 사용
+  const effectiveBaseUrl = baseUrl || '';
 
   const updateConfig = useCallback((updates: Partial<RAGConfig>) => {
     const newConfig = { ...config, ...updates };
@@ -48,14 +70,14 @@ export function useRAGChat(baseUrl: string) {
 
       if (mode === 'chat') {
         // RAG 모드: 먼저 검색 수행
-        searchResults = await ragService.searchVectors(content, baseUrl, controller.signal);
+        searchResults = await ragService.searchVectors(content, effectiveBaseUrl, controller.signal);
         setSearchResults(searchResults);
         
         // 검색 결과와 함께 채팅 (세션 ID 포함)
-        response = await ragService.chatWithRAG(content, baseUrl, searchResults, controller.signal, sessionId);
+        response = await ragService.chatWithRAG(content, effectiveBaseUrl, searchResults, controller.signal, sessionId);
       } else {
         // 직접 질문 모드 (세션 ID 포함)
-        response = await ragService.askWithoutRAG(content, baseUrl, controller.signal, sessionId);
+        response = await ragService.askWithoutRAG(content, effectiveBaseUrl, controller.signal, sessionId);
       }
 
       // 세션 ID 업데이트 (응답에서 받은 세션 ID 사용)
@@ -89,7 +111,7 @@ export function useRAGChat(baseUrl: string) {
       }
       setLoading(false);
     }
-  }, [baseUrl, loading, ragService, sessionId]);
+  }, [effectiveBaseUrl, loading, ragService, sessionId]);
 
   const clearMessages = useCallback(async () => {
     setMessages([]);
@@ -98,22 +120,21 @@ export function useRAGChat(baseUrl: string) {
     // 서버의 히스토리도 삭제
     if (sessionId) {
       try {
-        await ragService.clearHistory(baseUrl, sessionId);
+        await ragService.clearHistory(effectiveBaseUrl, sessionId);
       } catch (error) {
         console.error('Failed to clear server history:', error);
       }
     }
     
-    // 새로운 세션 ID 생성
-    setSessionId(generateSessionId());
-  }, [sessionId, baseUrl, ragService]);
+    // 세션 ID는 유지 (새로 생성하지 않음)
+  }, [sessionId, effectiveBaseUrl, ragService]);
 
   // 히스토리 조회 기능
   const loadHistory = useCallback(async () => {
     if (!sessionId) return;
     
     try {
-      const history = await ragService.getHistory(baseUrl, sessionId);
+      const history = await ragService.getHistory(effectiveBaseUrl, sessionId);
       // 서버 히스토리를 로컬 메시지로 변환
       const historyMessages: Message[] = history.split('\n').filter(line => line.trim()).map(line => {
         if (line.startsWith('사용자: ')) {
@@ -136,7 +157,7 @@ export function useRAGChat(baseUrl: string) {
     } catch (error) {
       console.error('Failed to load history:', error);
     }
-  }, [sessionId, baseUrl, ragService]);
+  }, [sessionId, effectiveBaseUrl, ragService]);
 
   const cancelRequest = useCallback(() => {
     abortRef.current?.abort();
@@ -155,8 +176,18 @@ export function useRAGChat(baseUrl: string) {
     }
   }, [ragService, searchResults, updateConfig]);
 
+  // 세션 ID 재설정 함수
+  const resetSession = useCallback(() => {
+    const newSessionId = generateSessionId();
+    localStorage.setItem('rag_session_id', newSessionId);
+    setSessionId(newSessionId);
+    setMessages([]);
+    setSearchResults([]);
+  }, []);
+
   return {
     messages,
+    setMessages,
     loading,
     searchResults,
     config,
@@ -167,7 +198,8 @@ export function useRAGChat(baseUrl: string) {
     cancelRequest,
     updateConfig,
     evaluateSearchQuality,
-    optimizeParameters
+    optimizeParameters,
+    resetSession
   };
 }
 

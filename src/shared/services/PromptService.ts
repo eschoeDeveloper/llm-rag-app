@@ -145,7 +145,7 @@ export class PromptService {
     if (!results.length) return '검색 결과가 없습니다.';
     
     return results.map((result, index) => 
-      `${index + 1}. ${result.content}\n   점수: ${result.score?.toFixed(3) || 'N/A'}\n   출처: ${result.source || 'Unknown'}`
+      `${index + 1}. ${typeof result.content === 'string' ? result.content : JSON.stringify(result.content)}\n   점수: ${result.score?.toFixed(3) || 'N/A'}\n   출처: ${result.source || 'Unknown'}`
     ).join('\n\n');
   }
 
