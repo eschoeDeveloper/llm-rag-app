@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Input } from '../../shared/ui/Input.tsx';
 import { documentUploadService, DocumentUploadRequest, DocumentInfo } from '../../shared/services/DocumentUploadService.ts';
@@ -7,12 +7,14 @@ interface DocumentUploadPanelProps {
   sessionId: string | null;
   onUploadComplete: (document: DocumentInfo) => void;
   onError: (error: string) => void;
+  baseUrl?: string;
 }
 
 export const DocumentUploadPanel: React.FC<DocumentUploadPanelProps> = ({
   sessionId,
   onUploadComplete,
   onError,
+  baseUrl = '/api',
 }) => {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -23,6 +25,11 @@ export const DocumentUploadPanel: React.FC<DocumentUploadPanelProps> = ({
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // baseUrl 설정
+  useEffect(() => {
+    documentUploadService.setBaseUrl(baseUrl);
+  }, [baseUrl]);
 
   const loadDocuments = useCallback(async () => {
     if (!sessionId) return;

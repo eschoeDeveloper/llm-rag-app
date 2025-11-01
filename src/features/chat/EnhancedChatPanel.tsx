@@ -376,6 +376,7 @@ export function EnhancedChatPanel({ base }: { base: string }) {
                 onThreadSelect={handleThreadSelect}
                 onError={setError}
                 refreshKey={threadsRefreshKey}
+                baseUrl={base}
               />
               <div className="mt-4">
                 <Button
@@ -395,6 +396,7 @@ export function EnhancedChatPanel({ base }: { base: string }) {
               sessionId={sessionId}
               onUploadComplete={handleDocumentUpload}
               onError={setError}
+              baseUrl={base}
             />
           )}
         </div>

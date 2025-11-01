@@ -8,6 +8,7 @@ interface ConversationThreadPanelProps {
   onThreadSelect: (thread: ConversationThread) => void;
   onError: (error: string) => void;
   refreshKey?: number; // 새로고침을 위한 key prop
+  baseUrl?: string; // API base URL
 }
 
 export const ConversationThreadPanel: React.FC<ConversationThreadPanelProps> = ({
@@ -15,6 +16,7 @@ export const ConversationThreadPanel: React.FC<ConversationThreadPanelProps> = (
   onThreadSelect,
   onError,
   refreshKey,
+  baseUrl = '/api',
 }) => {
   const [threads, setThreads] = useState<ConversationThread[]>([]);
   const [loading, setLoading] = useState(false);
@@ -23,8 +25,8 @@ export const ConversationThreadPanel: React.FC<ConversationThreadPanelProps> = (
 
   // baseUrl 설정
   useEffect(() => {
-    conversationThreadService.setBaseUrl('/api');
-  }, []);
+    conversationThreadService.setBaseUrl(baseUrl);
+  }, [baseUrl]);
   const [newThreadDescription, setNewThreadDescription] = useState('');
 
   const loadThreads = useCallback(async () => {
