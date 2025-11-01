@@ -1,4 +1,5 @@
 import { postJson, getJson, putJson, deleteJson } from '../api/http.ts';
+import { toAbsoluteUrl } from '../utils/urlUtils.ts';
 
 export interface ConversationThread {
   id: string;
@@ -47,7 +48,8 @@ export class ConversationThreadService {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await fetch(`${this.baseUrl}/threads`, {
+    const url = toAbsoluteUrl(this.baseUrl, '/threads');
+    const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(request)
@@ -61,7 +63,8 @@ export class ConversationThreadService {
   }
 
   async getThread(threadId: string, sessionId: string): Promise<ConversationThread> {
-    const response = await getJson<ConversationThread>(`${this.baseUrl}/threads/${threadId}`);
+    const url = toAbsoluteUrl(this.baseUrl, `/threads/${threadId}`);
+    const response = await getJson<ConversationThread>(url);
     return response;
   }
 
@@ -71,7 +74,8 @@ export class ConversationThreadService {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await fetch(`${this.baseUrl}/threads`, {
+    const url = toAbsoluteUrl(this.baseUrl, '/threads');
+    const response = await fetch(url, {
       method: 'GET',
       headers
     });
@@ -89,7 +93,8 @@ export class ConversationThreadService {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await fetch(`${this.baseUrl}/threads/${threadId}/messages`, {
+    const url = toAbsoluteUrl(this.baseUrl, `/threads/${threadId}/messages`);
+    const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(request)
@@ -103,16 +108,19 @@ export class ConversationThreadService {
   }
 
   async updateThreadTitle(threadId: string, request: UpdateTitleRequest, sessionId: string): Promise<ConversationThread> {
-    const response = await putJson<ConversationThread>(`${this.baseUrl}/threads/${threadId}/title`, request);
+    const url = toAbsoluteUrl(this.baseUrl, `/threads/${threadId}/title`);
+    const response = await putJson<ConversationThread>(url, request);
     return response;
   }
 
   async archiveThread(threadId: string, sessionId: string): Promise<void> {
-    await postJson<void>(`${this.baseUrl}/threads/${threadId}/archive`, {});
+    const url = toAbsoluteUrl(this.baseUrl, `/threads/${threadId}/archive`);
+    await postJson<void>(url, {});
   }
 
   async deleteThread(threadId: string, sessionId: string): Promise<void> {
-    await deleteJson<void>(`${this.baseUrl}/threads/${threadId}`);
+    const url = toAbsoluteUrl(this.baseUrl, `/threads/${threadId}`);
+    await deleteJson<void>(url);
   }
 }
 

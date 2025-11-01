@@ -1,4 +1,5 @@
 import { RAGConfig, SearchResult, ChatResponse } from '../types/prompt.ts';
+import { toAbsoluteUrl } from '../utils/urlUtils.ts';
 
 export class RAGService {
   private static instance: RAGService;
@@ -37,8 +38,7 @@ export class RAGService {
   ): Promise<SearchResult[]> {
     try {
       const url = baseUrl || this.baseUrl;
-      // 상대 경로를 절대 URL로 변환
-      const fullUrl = url.startsWith('http') ? `${url}/embeddings/search` : url.startsWith('/') ? `${window.location.origin}${url}/embeddings/search` : `${window.location.origin}/${url}/embeddings/search`;
+      const fullUrl = toAbsoluteUrl(url, '/embeddings/search');
       console.log('[RAGService] searchVectors - Full URL:', fullUrl);
       const response = await fetch(fullUrl, {
         method: 'POST',
@@ -79,12 +79,10 @@ export class RAGService {
     
     try {
       const url = baseUrl || this.baseUrl;
-      // 상대 경로를 절대 URL로 변환
-      const fullUrl = url.startsWith('http') ? `${url}/chat` : url.startsWith('/') ? `${window.location.origin}${url}/chat` : `${window.location.origin}/${url}/chat`;
+      const fullUrl = toAbsoluteUrl(url, '/chat');
       console.log('[RAGService] chatWithRAG - Full URL:', fullUrl);
       console.log('[RAGService] chatWithRAG - baseUrl:', baseUrl);
       console.log('[RAGService] chatWithRAG - this.baseUrl:', this.baseUrl);
-      console.log('[RAGService] chatWithRAG - window.location.origin:', window.location.origin);
       
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {
@@ -147,12 +145,10 @@ export class RAGService {
     
     try {
       const url = baseUrl || this.baseUrl;
-      // 상대 경로를 절대 URL로 변환
-      const fullUrl = url.startsWith('http') ? `${url}/ask` : url.startsWith('/') ? `${window.location.origin}${url}/ask` : `${window.location.origin}/${url}/ask`;
+      const fullUrl = toAbsoluteUrl(url, '/ask');
       console.log('[RAGService] askWithoutRAG - Full URL:', fullUrl);
       console.log('[RAGService] askWithoutRAG - baseUrl:', baseUrl);
       console.log('[RAGService] askWithoutRAG - this.baseUrl:', this.baseUrl);
-      console.log('[RAGService] askWithoutRAG - window.location.origin:', window.location.origin);
       
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {
@@ -274,7 +270,8 @@ export class RAGService {
   // 히스토리 조회
   async getHistory(baseUrl: string, sessionId: string): Promise<string> {
     try {
-      const response = await fetch(`${baseUrl}/history`, {
+      const url = toAbsoluteUrl(baseUrl, '/history');
+      const response = await fetch(url, {
         method: 'GET',
         headers: { 'X-Session-ID': sessionId }
       });
@@ -294,7 +291,8 @@ export class RAGService {
   // 히스토리 삭제
   async clearHistory(baseUrl: string, sessionId: string): Promise<void> {
     try {
-      const response = await fetch(`${baseUrl}/history`, {
+      const url = toAbsoluteUrl(baseUrl, '/history');
+      const response = await fetch(url, {
         method: 'DELETE',
         headers: { 'X-Session-ID': sessionId }
       });
@@ -311,7 +309,8 @@ export class RAGService {
   // 히스토리 개수 조회
   async getHistoryCount(baseUrl: string, sessionId: string): Promise<number> {
     try {
-      const response = await fetch(`${baseUrl}/history/count`, {
+      const url = toAbsoluteUrl(baseUrl, '/history/count');
+      const response = await fetch(url, {
         method: 'GET',
         headers: { 'X-Session-ID': sessionId }
       });

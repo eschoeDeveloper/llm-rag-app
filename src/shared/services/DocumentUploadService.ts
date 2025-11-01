@@ -1,4 +1,5 @@
 // Native fetch implementation - no http dependency
+import { toAbsoluteUrl } from '../utils/urlUtils.ts';
 
 export interface DocumentUploadRequest {
   title: string;
@@ -50,7 +51,8 @@ export class DocumentUploadService {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await fetch(`${this.baseUrl}/documents/upload`, {
+    const url = toAbsoluteUrl(this.baseUrl, '/documents/upload');
+    const response = await fetch(url, {
       method: 'POST',
       headers,
       body: formData,
@@ -85,7 +87,8 @@ export class DocumentUploadService {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await fetch(`${this.baseUrl}/documents`, {
+    const url = toAbsoluteUrl(this.baseUrl, '/documents');
+    const response = await fetch(url, {
       method: 'GET',
       headers,
     });
@@ -105,7 +108,8 @@ export class DocumentUploadService {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await fetch(`${this.baseUrl}/documents/${documentId}`, {
+    const url = toAbsoluteUrl(this.baseUrl, `/documents/${documentId}`);
+    const response = await fetch(url, {
       method: 'GET',
       headers,
     });
@@ -125,7 +129,8 @@ export class DocumentUploadService {
       headers['X-Session-ID'] = sessionId;
     }
 
-    const response = await fetch(`${this.baseUrl}/documents/${documentId}`, {
+    const url = toAbsoluteUrl(this.baseUrl, `/documents/${documentId}`);
+    const response = await fetch(url, {
       method: 'DELETE',
       headers,
     });

@@ -4,6 +4,7 @@ import { Textarea } from "../../shared/ui/Textarea.tsx";
 import { Input } from "../../shared/ui/Input.tsx";
 import { Button } from "../../shared/ui/Button.tsx";
 import { postJson } from "../../shared/api/http.ts";
+import { toAbsoluteUrl } from "../../shared/utils/urlUtils.ts";
 
 function parseEmbedding(text: string) {
   // accepts: "0.1, 0.2, -0.3" or "[0.1,0.2]" or "(0.1,0.2)"
@@ -31,7 +32,8 @@ export function VectorPanel({ base }: { base: string }) {
     }
     setLoading(true);
     try {
-      const data = await postJson<any[]>(`${base}/embeddings/search`, {
+      const url = toAbsoluteUrl(base, '/embeddings/search');
+      const data = await postJson<any[]>(url, {
         embedding: arr,
         topK: Number(topK) || 10,
       });

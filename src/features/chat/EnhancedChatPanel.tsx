@@ -10,6 +10,7 @@ import { ConversationThreadPanel } from "../conversation/ConversationThreadPanel
 import { DocumentUploadPanel } from "../document/DocumentUploadPanel.tsx";
 import { conversationThreadService } from "../../shared/services/ConversationThreadService.ts";
 import { RAGService } from "../../shared/services/RAGService.ts";
+import { toAbsoluteUrl } from "../../shared/utils/urlUtils.ts";
 
 export function EnhancedChatPanel({ base }: { base: string }) {
   const [input, setInput] = React.useState("");
@@ -79,10 +80,8 @@ export function EnhancedChatPanel({ base }: { base: string }) {
         }, sessionId);
         
         // 2. LLM API 호출
-        // 상대 경로를 절대 URL로 변환
-        const apiUrl = base.startsWith('http') ? `${base}/ask` : base.startsWith('/') ? `${window.location.origin}${base}/ask` : `${window.location.origin}/${base}/ask`;
+        const apiUrl = toAbsoluteUrl(base, '/ask');
         console.log('[EnhancedChatPanel] Thread mode - base:', base);
-        console.log('[EnhancedChatPanel] Thread mode - window.location.origin:', window.location.origin);
         console.log('[EnhancedChatPanel] Thread mode - Full API URL:', apiUrl);
         const response = await fetch(apiUrl, {
           method: 'POST',

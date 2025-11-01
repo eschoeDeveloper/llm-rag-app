@@ -1,4 +1,5 @@
 import { postJson } from '../api/http.ts';
+import { toAbsoluteUrl } from '../utils/urlUtils.ts';
 
 export interface AdvancedSearchRequest {
   query: string;
@@ -55,7 +56,8 @@ export class AdvancedSearchService {
       headers['X-Session-ID'] = request.sessionId;
     }
 
-    const response = await fetch(`${this.baseUrl}/advanced-search`, {
+    const url = toAbsoluteUrl(this.baseUrl, '/advanced-search');
+    const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(request),
@@ -69,7 +71,8 @@ export class AdvancedSearchService {
   }
 
   async getSearchHistory(sessionId: string): Promise<SearchHistoryEntry[]> {
-    const response = await fetch(`${this.baseUrl}/search-history?sessionId=${sessionId}`);
+    const url = toAbsoluteUrl(this.baseUrl, `/search-history?sessionId=${sessionId}`);
+    const response = await fetch(url);
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${await response.text()}`);
@@ -79,7 +82,8 @@ export class AdvancedSearchService {
   }
 
   async clearSearchHistory(sessionId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/search-history?sessionId=${sessionId}`, {
+    const url = toAbsoluteUrl(this.baseUrl, `/search-history?sessionId=${sessionId}`);
+    const response = await fetch(url, {
       method: 'DELETE',
     });
 
