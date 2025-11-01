@@ -37,7 +37,10 @@ export class RAGService {
   ): Promise<SearchResult[]> {
     try {
       const url = baseUrl || this.baseUrl;
-      const response = await fetch(`${url}/embeddings/search`, {
+      // 상대 경로를 절대 URL로 변환
+      const fullUrl = url.startsWith('http') ? `${url}/embeddings/search` : url.startsWith('/') ? `${window.location.origin}${url}/embeddings/search` : `${window.location.origin}/${url}/embeddings/search`;
+      console.log('[RAGService] searchVectors - Full URL:', fullUrl);
+      const response = await fetch(fullUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -76,10 +79,12 @@ export class RAGService {
     
     try {
       const url = baseUrl || this.baseUrl;
-      const fullUrl = `${url}/chat`;
+      // 상대 경로를 절대 URL로 변환
+      const fullUrl = url.startsWith('http') ? `${url}/chat` : url.startsWith('/') ? `${window.location.origin}${url}/chat` : `${window.location.origin}/${url}/chat`;
       console.log('[RAGService] chatWithRAG - Full URL:', fullUrl);
       console.log('[RAGService] chatWithRAG - baseUrl:', baseUrl);
       console.log('[RAGService] chatWithRAG - this.baseUrl:', this.baseUrl);
+      console.log('[RAGService] chatWithRAG - window.location.origin:', window.location.origin);
       
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {
@@ -133,10 +138,12 @@ export class RAGService {
     
     try {
       const url = baseUrl || this.baseUrl;
-      const fullUrl = `${url}/ask`;
+      // 상대 경로를 절대 URL로 변환
+      const fullUrl = url.startsWith('http') ? `${url}/ask` : url.startsWith('/') ? `${window.location.origin}${url}/ask` : `${window.location.origin}/${url}/ask`;
       console.log('[RAGService] askWithoutRAG - Full URL:', fullUrl);
       console.log('[RAGService] askWithoutRAG - baseUrl:', baseUrl);
       console.log('[RAGService] askWithoutRAG - this.baseUrl:', this.baseUrl);
+      console.log('[RAGService] askWithoutRAG - window.location.origin:', window.location.origin);
       
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {

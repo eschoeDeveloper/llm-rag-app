@@ -79,8 +79,10 @@ export function EnhancedChatPanel({ base }: { base: string }) {
         }, sessionId);
         
         // 2. LLM API 호출
-        const apiUrl = `${base}/ask`;
+        // 상대 경로를 절대 URL로 변환
+        const apiUrl = base.startsWith('http') ? `${base}/ask` : base.startsWith('/') ? `${window.location.origin}${base}/ask` : `${window.location.origin}/${base}/ask`;
         console.log('[EnhancedChatPanel] Thread mode - base:', base);
+        console.log('[EnhancedChatPanel] Thread mode - window.location.origin:', window.location.origin);
         console.log('[EnhancedChatPanel] Thread mode - Full API URL:', apiUrl);
         const response = await fetch(apiUrl, {
           method: 'POST',
