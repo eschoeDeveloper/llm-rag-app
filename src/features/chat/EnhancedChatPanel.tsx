@@ -79,7 +79,10 @@ export function EnhancedChatPanel({ base }: { base: string }) {
         }, sessionId);
         
         // 2. LLM API 호출
-        const response = await fetch(`${base}/ask`, {
+        const apiUrl = `${base}/ask`;
+        console.log('[EnhancedChatPanel] Thread mode - base:', base);
+        console.log('[EnhancedChatPanel] Thread mode - Full API URL:', apiUrl);
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

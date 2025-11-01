@@ -64,12 +64,16 @@ export function useRAGChat(baseUrl?: string) {
     abortRef.current = controller;
 
     setLoading(true);
+    console.log('[useRAGChat] sendMessage - mode:', mode);
+    console.log('[useRAGChat] sendMessage - effectiveBaseUrl:', effectiveBaseUrl);
+    console.log('[useRAGChat] sendMessage - baseUrl prop:', baseUrl);
     try {
       let response: ChatResponse;
       let searchResults: SearchResult[] = [];
 
       if (mode === 'chat') {
         // RAG 모드: 먼저 검색 수행
+        console.log('[useRAGChat] Starting chat mode with RAG');
         searchResults = await ragService.searchVectors(content, effectiveBaseUrl, controller.signal);
         setSearchResults(searchResults);
         
@@ -77,6 +81,7 @@ export function useRAGChat(baseUrl?: string) {
         response = await ragService.chatWithRAG(content, effectiveBaseUrl, searchResults, controller.signal, sessionId);
       } else {
         // 직접 질문 모드 (세션 ID 포함)
+        console.log('[useRAGChat] Starting ask mode without RAG');
         response = await ragService.askWithoutRAG(content, effectiveBaseUrl, controller.signal, sessionId);
       }
 

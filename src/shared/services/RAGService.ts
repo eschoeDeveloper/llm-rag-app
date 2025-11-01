@@ -76,12 +76,18 @@ export class RAGService {
     
     try {
       const url = baseUrl || this.baseUrl;
+      const fullUrl = `${url}/chat`;
+      console.log('[RAGService] chatWithRAG - Full URL:', fullUrl);
+      console.log('[RAGService] chatWithRAG - baseUrl:', baseUrl);
+      console.log('[RAGService] chatWithRAG - this.baseUrl:', this.baseUrl);
+      
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {
         headers['X-Session-ID'] = sessionId;
       }
+      console.log('[RAGService] chatWithRAG - Headers:', headers);
 
-      const response = await fetch(`${url}/chat`, {
+      const response = await fetch(fullUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -127,12 +133,19 @@ export class RAGService {
     
     try {
       const url = baseUrl || this.baseUrl;
+      const fullUrl = `${url}/ask`;
+      console.log('[RAGService] askWithoutRAG - Full URL:', fullUrl);
+      console.log('[RAGService] askWithoutRAG - baseUrl:', baseUrl);
+      console.log('[RAGService] askWithoutRAG - this.baseUrl:', this.baseUrl);
+      
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {
         headers['X-Session-ID'] = sessionId;
       }
+      console.log('[RAGService] askWithoutRAG - Headers:', headers);
+      console.log('[RAGService] askWithoutRAG - Body:', { query, config: this.config, sessionId });
 
-      const response = await fetch(`${url}/ask`, {
+      const response = await fetch(fullUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify({
