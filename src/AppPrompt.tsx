@@ -18,9 +18,9 @@ const getDefaultBase = () => {
   // 현재 도메인이 프로덕션인 경우
   if (typeof window !== 'undefined') {
     const origin = window.location.origin;
-    // www.llmragapp.com이면 같은 도메인의 /api 사용
+    // www.llmragapp.com이면 Heroku 백엔드 URL 사용
     if (origin.includes('llmragapp.com')) {
-      return '/api';
+      return 'https://llm-rag-api-a8768292f672.herokuapp.com/api';
     }
     // 로컬 개발 환경
     if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
@@ -28,7 +28,8 @@ const getDefaultBase = () => {
     }
   }
   
-  return '/api';
+  // 기본값: Heroku 백엔드 URL
+  return 'https://llm-rag-api-a8768292f672.herokuapp.com/api';
 };
 
 const DEFAULT_BASE = getDefaultBase();
