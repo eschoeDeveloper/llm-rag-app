@@ -9,23 +9,30 @@ import { useLocalStorage } from "./shared/hooks/useLocalStorage.ts";
 
 // 프로덕션 환경 자동 감지
 const getDefaultBase = () => {
-  // 환경 변수에서 먼저 가져오기
+  // 현재 도메인 확인
+  const isProduction = typeof window !== 'undefined' && window.location.origin.includes('llmragapp.com');
+  const isLocal = typeof window !== 'undefined' && (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1'));
+  
+  // 환경 변수에서 가져오기
   const envBase = (import.meta as any).env?.VITE_API_BASE;
-  if (envBase) {
-    return envBase;
+  
+  // 프로덕션 환경에서는 무조건 Heroku URL 사용 (환경 변수가 상대 경로면 변환)
+  if (isProduction) {
+    if (envBase && envBase.startsWith('http')) {
+      return envBase; // 이미 절대 URL이면 그대로 사용
+    }
+    // 상대 경로나 /api면 Heroku URL로 변환
+    return 'https://llm-rag-api-a8768292f672.herokuapp.com/api';
   }
   
-  // 현재 도메인이 프로덕션인 경우
-  if (typeof window !== 'undefined') {
-    const origin = window.location.origin;
-    // www.llmragapp.com이면 Heroku 백엔드 URL 사용
-    if (origin.includes('llmragapp.com')) {
-      return 'https://llm-rag-api-a8768292f672.herokuapp.com/api';
-    }
-    // 로컬 개발 환경
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      return '/api'; // vite proxy 사용
-    }
+  // 로컬 개발 환경
+  if (isLocal) {
+    return envBase || '/api'; // vite proxy 사용
+  }
+  
+  // 환경 변수가 있으면 사용 (절대 URL인 경우)
+  if (envBase && envBase.startsWith('http')) {
+    return envBase;
   }
   
   // 기본값: Heroku 백엔드 URL
@@ -39,12 +46,30 @@ export default function AppPrompt() {
   const [base, setBase] = useLocalStorage("apiBase", DEFAULT_BASE);
   const [tab, setTab] = React.useState("chat" as Tab);
 
+  // 프로덕션 환경에서 localStorage에 상대 경로(/api)가 저장되어 있으면 자동으로 Heroku URL로 변경
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin;
+      const herokuUrl = 'https://llm-rag-api-a8768292f672.herokuapp.com/api';
+      
+      // 프로덕션 환경이고, base가 상대 경로(/api) 또는 같은 도메인으로 시작하는 경우
+      // Heroku URL이 아닌 경우에만 변경
+      if (origin.includes('llmragapp.com') && base !== herokuUrl && (base === '/api' || (base.startsWith('/') && !base.startsWith('http')))) {
+        console.log('[AppPrompt] 프로덕션 환경 감지: localStorage 값이 상대 경로입니다. Heroku URL로 자동 변경합니다.');
+        console.log('[AppPrompt] 이전 값:', base);
+        console.log('[AppPrompt] 새 값:', herokuUrl);
+        setBase(herokuUrl);
+      }
+    }
+  }, [base, setBase]); // base가 변경될 때마다 확인
+
   // 초기화 시 현재 설정 로그
   React.useEffect(() => {
     console.log('[AppPrompt] Initial API base URL:', base);
     console.log('[AppPrompt] Window location origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
     console.log('[AppPrompt] Environment VITE_API_BASE:', (import.meta as any).env?.VITE_API_BASE || 'not set');
-  }, []);
+    console.log('[AppPrompt] DEFAULT_BASE (computed):', DEFAULT_BASE);
+  }, [base]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
