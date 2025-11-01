@@ -92,6 +92,9 @@ export class RAGService {
       }
       console.log('[RAGService] chatWithRAG - Headers:', headers);
 
+      console.log('[RAGService] chatWithRAG - About to send request to:', fullUrl);
+      console.log('[RAGService] chatWithRAG - Request method: POST');
+      
       const response = await fetch(fullUrl, {
         method: 'POST',
         headers,
@@ -104,8 +107,14 @@ export class RAGService {
         signal
       });
 
+      console.log('[RAGService] chatWithRAG - Response status:', response.status);
+      console.log('[RAGService] chatWithRAG - Response statusText:', response.statusText);
+      console.log('[RAGService] chatWithRAG - Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
-        throw new Error(`Chat failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('[RAGService] chatWithRAG - Error response body:', errorText);
+        throw new Error(`Chat failed: ${response.status} - ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
@@ -152,6 +161,9 @@ export class RAGService {
       console.log('[RAGService] askWithoutRAG - Headers:', headers);
       console.log('[RAGService] askWithoutRAG - Body:', { query, config: this.config, sessionId });
 
+      console.log('[RAGService] askWithoutRAG - About to send request to:', fullUrl);
+      console.log('[RAGService] askWithoutRAG - Request method: POST');
+      
       const response = await fetch(fullUrl, {
         method: 'POST',
         headers,
@@ -163,8 +175,14 @@ export class RAGService {
         signal
       });
 
+      console.log('[RAGService] askWithoutRAG - Response status:', response.status);
+      console.log('[RAGService] askWithoutRAG - Response statusText:', response.statusText);
+      console.log('[RAGService] askWithoutRAG - Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
-        throw new Error(`Ask failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('[RAGService] askWithoutRAG - Error response body:', errorText);
+        throw new Error(`Ask failed: ${response.status} - ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();

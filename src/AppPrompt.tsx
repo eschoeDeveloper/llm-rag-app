@@ -7,18 +7,42 @@ import { Button } from "./shared/ui/Button.tsx";
 import { Chip } from "./shared/ui/Chip.tsx";
 import { useLocalStorage } from "./shared/hooks/useLocalStorage.ts";
 
-const DEFAULT_BASE = import.meta.env.VITE_API_BASE || "/api";
+// 프로덕션 환경 자동 감지
+const getDefaultBase = () => {
+  // 환경 변수에서 먼저 가져오기
+  const envBase = (import.meta as any).env?.VITE_API_BASE;
+  if (envBase) {
+    return envBase;
+  }
+  
+  // 현재 도메인이 프로덕션인 경우
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin;
+    // www.llmragapp.com이면 같은 도메인의 /api 사용
+    if (origin.includes('llmragapp.com')) {
+      return '/api';
+    }
+    // 로컬 개발 환경
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return '/api'; // vite proxy 사용
+    }
+  }
+  
+  return '/api';
+};
+
+const DEFAULT_BASE = getDefaultBase();
 type Tab = "chat" | "vector";
 
 export default function AppPrompt() {
   const [base, setBase] = useLocalStorage("apiBase", DEFAULT_BASE);
   const [tab, setTab] = React.useState("chat" as Tab);
 
-  // 로컬 스토리지 강제 리셋 (개발용)
+  // 초기화 시 현재 설정 로그
   React.useEffect(() => {
-    if (base && base.includes('herokuapp.com')) {
-      setBase(DEFAULT_BASE);
-    }
+    console.log('[AppPrompt] Initial API base URL:', base);
+    console.log('[AppPrompt] Window location origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
+    console.log('[AppPrompt] Environment VITE_API_BASE:', (import.meta as any).env?.VITE_API_BASE || 'not set');
   }, []);
 
   return (
@@ -76,16 +100,16 @@ export default function AppPrompt() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
             <div className="lg:col-span-3">
               <Input 
-                value={base} 
+                value={base}
                 onChange={setBase} 
-                placeholder="Enter your API base URL..." 
-                disabled={base !== undefined ? true : false}
+                placeholder="Enter your API base URL (e.g., /api or https://api.llmragapp.com/api)" 
+                disabled={false}
                 className="text-lg py-4 px-6 rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all duration-200"
               />
             </div>
             <div className="flex gap-3">
               <Button 
-                onClick={() => setTab("chat")} 
+                onClick={() => setTab("chat")}
                 disabled={tab === "chat"}
                 variant={tab === "chat" ? "primary" : "outline"}
                 size="lg"
@@ -94,7 +118,7 @@ export default function AppPrompt() {
                 💬 Chat
               </Button>
               <Button 
-                onClick={() => setTab("vector")} 
+                onClick={() => setTab("vector")}
                 disabled={tab === "vector"}
                 variant={tab === "vector" ? "primary" : "outline"}
                 size="lg"
