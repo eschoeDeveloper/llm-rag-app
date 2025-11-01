@@ -36,7 +36,7 @@ export function useRAGChat(baseUrl?: string) {
   }, [sessionId]);
   
   // baseUrl이 없으면 기본값 사용
-  const effectiveBaseUrl = baseUrl || '';
+  const effectiveBaseUrl = baseUrl || '/api';
 
   const updateConfig = useCallback((updates: Partial<RAGConfig>) => {
     const newConfig = { ...config, ...updates };
