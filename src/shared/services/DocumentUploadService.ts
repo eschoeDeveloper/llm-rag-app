@@ -17,6 +17,8 @@ export interface DocumentUploadResponse {
   processedChunks: number;
   uploadedAt: string;
   errors?: string[];
+  warnings?: string[];
+  extractionMode?: string;
   metadata?: Record<string, any>;
 }
 
@@ -58,23 +60,29 @@ export class DocumentUploadService {
       body: formData,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Upload error response:', errorText);
-      throw new Error(`Upload failed: ${response.status} - ${errorText}`);
-    }
-
     const text = await response.text();
-    console.log('Upload response text:', text);
-    
     if (!text || text.trim() === '') {
       throw new Error('Empty response from server');
     }
 
+    // 422 = 서버가 요청은 받았지만 콘텐츠 처리 실패 (FAILED status 동봉).
+    // 422 도 DocumentUploadResponse 형태이므로 일반 흐름으로 통과시켜 status 검사로 처리.
+    if (response.status === 422) {
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error(`Upload failed: 422 - ${text}`);
+      }
+    }
+
+    if (!response.ok) {
+      console.error('Upload error response:', text);
+      throw new Error(`Upload failed: ${response.status} - ${text}`);
+    }
+
     try {
       return JSON.parse(text);
-    } catch (e) {
-      console.error('Failed to parse JSON:', text);
+    } catch {
       throw new Error(`Invalid JSON response: ${text}`);
     }
   }

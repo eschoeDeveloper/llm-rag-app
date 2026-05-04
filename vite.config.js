@@ -5,9 +5,6 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  define: {
-    'import.meta.env.VITE_API_BASE': JSON.stringify('/api'),
-  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -1,5 +1,9 @@
 import { postJson } from '../api/http.ts';
 import { toAbsoluteUrl } from '../utils/urlUtils.ts';
+import type { SearchResult } from '../types/prompt.ts';
+
+// 단일 정의 유지를 위해 shared/types/prompt.ts 의 SearchResult 재export.
+export type { SearchResult };
 
 export interface AdvancedSearchRequest {
   query: string;
@@ -33,14 +37,6 @@ export interface AdvancedSearchResponse {
   hasNext: boolean;
   hasPrevious: boolean;
   metadata?: Record<string, any>;
-}
-
-export interface SearchResult {
-  id: string;
-  content: string;
-  score: number;
-  metadata: Record<string, any>;
-  source: string;
 }
 
 export class AdvancedSearchService {

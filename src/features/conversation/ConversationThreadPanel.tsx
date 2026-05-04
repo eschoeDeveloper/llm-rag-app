@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '../../shared/ui/Button.tsx';
 import { Input } from '../../shared/ui/Input.tsx';
 import { conversationThreadService, ConversationThread, CreateThreadRequest } from '../../shared/services/ConversationThreadService.ts';
@@ -18,217 +19,161 @@ export const ConversationThreadPanel: React.FC<ConversationThreadPanelProps> = (
   refreshKey,
   baseUrl = '/api',
 }) => {
-  const [threads, setThreads] = useState<ConversationThread[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newThreadTitle, setNewThreadTitle] = useState('');
+  const [newThreadDescription, setNewThreadDescription] = useState('');
 
-  // baseUrl 설정
   useEffect(() => {
     conversationThreadService.setBaseUrl(baseUrl);
   }, [baseUrl]);
-  const [newThreadDescription, setNewThreadDescription] = useState('');
 
-  const loadThreads = useCallback(async () => {
-    if (!sessionId) {
-      console.log('No sessionId, skipping thread load');
-      return;
-    }
+  /**
+   * 스레드 목록 — React Query 로 sessionId+refreshKey 변경 시 자동 refetch.
+   * mutation (생성/보관) 후 invalidate 로 갱신.
+   */
+  const threadsQuery = useQuery<ConversationThread[]>({
+    queryKey: ["threads", sessionId, refreshKey],
+    queryFn: () => conversationThreadService.getUserThreads(sessionId!),
+    enabled: !!sessionId,
+  });
 
-    console.log('Loading threads for sessionId:', sessionId);
-    setLoading(true);
-    try {
-      const userThreads = await conversationThreadService.getUserThreads(sessionId);
-      console.log('Loaded threads:', userThreads);
-      console.log('Thread count:', userThreads.length);
-      userThreads.forEach(thread => {
-        console.log(`Thread ${thread.id}: ${thread.messages ? thread.messages.length : 'null'} messages`);
-      });
-      setThreads(userThreads);
-    } catch (error) {
-      console.error('Error loading threads:', error);
-      onError('스레드 목록을 불러오는 중 오류가 발생했습니다: ' + (error as Error).message);
-    } finally {
-      setLoading(false);
+  const threads = threadsQuery.data ?? [];
+  const loading = threadsQuery.isLoading;
+
+  useEffect(() => {
+    if (threadsQuery.error) {
+      onError('스레드 목록을 불러오는 중 오류가 발생했습니다: ' + (threadsQuery.error as Error).message);
     }
-  }, [sessionId, onError]);
+  }, [threadsQuery.error, onError]);
+
+  const refreshThreads = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["threads", sessionId] });
+  }, [queryClient, sessionId]);
 
   const createThread = useCallback(async () => {
-    if (!sessionId || !newThreadTitle.trim()) {
-      console.log('Cannot create thread: sessionId or title missing');
-      return;
-    }
-
-    console.log('Creating thread with title:', newThreadTitle.trim());
-    console.log('Using sessionId for thread creation:', sessionId);
+    if (!sessionId || !newThreadTitle.trim()) return;
     try {
       const request: CreateThreadRequest = {
         title: newThreadTitle.trim(),
         description: newThreadDescription.trim() || undefined,
       };
-
-      const newThread = await conversationThreadService.createThread(request, sessionId);
-      console.log('Thread created successfully:', newThread);
-      
-      // 로컬 상태 업데이트
-      setThreads(prev => {
-        const updated = [newThread, ...prev];
-        console.log('Updated threads list:', updated);
-        return updated;
-      });
-      
-      // 백엔드에서 최신 데이터 다시 로드
-      console.log('Reloading threads from backend...');
-      console.log('Using sessionId for thread loading:', sessionId);
-      const latestThreads = await conversationThreadService.getUserThreads(sessionId);
-      console.log('Latest threads from backend:', latestThreads);
-      setThreads(latestThreads);
-      
+      await conversationThreadService.createThread(request, sessionId);
+      refreshThreads();
       setNewThreadTitle('');
       setNewThreadDescription('');
       setShowCreateForm(false);
     } catch (error) {
-      console.error('Error creating thread:', error);
       onError('스레드 생성 중 오류가 발생했습니다: ' + (error as Error).message);
     }
-  }, [sessionId, newThreadTitle, newThreadDescription, onError]);
+  }, [sessionId, newThreadTitle, newThreadDescription, onError, refreshThreads]);
 
   const archiveThread = useCallback(async (threadId: string) => {
     if (!sessionId) return;
-
     try {
       await conversationThreadService.archiveThread(threadId, sessionId);
-      setThreads(prev => prev.filter(thread => thread.id !== threadId));
+      // 낙관 업데이트: 즉시 캐시에서 제거 후 refetch
+      queryClient.setQueryData<ConversationThread[]>(["threads", sessionId, refreshKey], prev =>
+        (prev ?? []).filter(t => t.id !== threadId));
+      refreshThreads();
     } catch (error) {
       onError('스레드 보관 중 오류가 발생했습니다: ' + (error as Error).message);
     }
-  }, [sessionId, onError]);
+  }, [sessionId, onError, queryClient, refreshKey, refreshThreads]);
 
   const deleteThread = useCallback(async (threadId: string) => {
     if (!sessionId) return;
-
     try {
       await conversationThreadService.deleteThread(threadId, sessionId);
-      setThreads(prev => prev.filter(thread => thread.id !== threadId));
+      queryClient.setQueryData<ConversationThread[]>(["threads", sessionId, refreshKey], prev =>
+        (prev ?? []).filter(t => t.id !== threadId));
+      refreshThreads();
     } catch (error) {
       onError('스레드 삭제 중 오류가 발생했습니다: ' + (error as Error).message);
     }
-  }, [sessionId, onError]);
+  }, [sessionId, onError, queryClient, refreshKey, refreshThreads]);
 
-  useEffect(() => {
-    loadThreads();
-  }, [loadThreads]);
+  // refreshKey 변경은 useQuery 의 queryKey 에 포함되어 자동 refetch — 별도 effect 불필요
 
-  // refreshKey가 변경될 때 스레드 목록 새로고침 (메시지 개수 업데이트를 위해)
-  useEffect(() => {
-    if (refreshKey !== undefined) {
-      console.log('Refresh key changed, reloading threads:', refreshKey);
-      loadThreads();
-    }
-  }, [refreshKey, loadThreads]);
+  const statusLabel = (s: ConversationThread['status']) =>
+    s === 'ACTIVE' ? '활성' : s === 'ARCHIVED' ? '보관됨' : '삭제됨';
+  const statusClass = (s: ConversationThread['status']) =>
+    s === 'ACTIVE' ? 'bg-matcha-soft text-matcha-hover'
+    : s === 'ARCHIVED' ? 'bg-soft-sand text-ink-secondary'
+    : 'bg-muted text-ink-tertiary';
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-800">대화 스레드</h3>
-        <Button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          size="sm"
-          variant="outline"
-        >
+        <h3 className="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wide">스레드</h3>
+        <Button onClick={() => setShowCreateForm(!showCreateForm)} size="sm" variant="ghost" className="text-xs">
           + 새 스레드
         </Button>
       </div>
 
-      {/* 새 스레드 생성 폼 */}
       {showCreateForm && (
-        <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
-          <Input
-            value={newThreadTitle}
-            onChange={setNewThreadTitle}
-            placeholder="스레드 제목"
-            className="w-full"
-          />
-          <Input
-            value={newThreadDescription}
-            onChange={setNewThreadDescription}
-            placeholder="스레드 설명 (선택사항)"
-            className="w-full"
-          />
-          <div className="flex space-x-2">
-            <Button
-              onClick={createThread}
-              disabled={!newThreadTitle.trim()}
-              size="sm"
-            >
+        <div className="space-y-2 p-3 bg-canvas border border-line-subtle rounded-md">
+          <Input value={newThreadTitle} onChange={setNewThreadTitle} placeholder="스레드 제목" />
+          <Input value={newThreadDescription} onChange={setNewThreadDescription} placeholder="설명 (선택)" />
+          <div className="flex gap-2">
+            <Button onClick={createThread} disabled={!newThreadTitle.trim()} size="sm" variant="primary" className="flex-1">
               생성
             </Button>
-            <Button
-              onClick={() => setShowCreateForm(false)}
-              size="sm"
-              variant="outline"
-            >
+            <Button onClick={() => setShowCreateForm(false)} size="sm" variant="outline" className="flex-1">
               취소
             </Button>
           </div>
         </div>
       )}
 
-      {/* 스레드 목록 */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {loading ? (
-          <div className="text-center py-4 text-gray-500">로딩 중...</div>
+          <p className="text-xs text-ink-tertiary text-center py-4">로딩 중…</p>
         ) : threads.length === 0 ? (
-          <div className="text-center py-4 text-gray-500">대화 스레드가 없습니다.</div>
+          <p className="text-xs text-ink-tertiary text-center py-4">대화 스레드가 없습니다.</p>
         ) : (
-          threads.map((thread, index) => (
-            <div
-              key={thread.id || `thread-${index}`}
-              className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-              onClick={() => onThreadSelect(thread)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-800">{thread.title}</h4>
-                  {thread.description && (
-                    <p className="text-sm text-gray-600 mt-1">{thread.description}</p>
-                  )}
-                  <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                    <span>메시지: {thread.messages ? thread.messages.filter(msg => msg.role === 'USER').length : 0}개</span>
-                    <span>생성: {thread.createdAt ? new Date(thread.createdAt).toLocaleDateString() : '알 수 없음'}</span>
-                    <span className={`px-2 py-1 rounded ${
-                      thread.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-                      thread.status === 'ARCHIVED' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {thread.status === 'ACTIVE' ? '활성' :
-                       thread.status === 'ARCHIVED' ? '보관됨' : '삭제됨'}
-                    </span>
+          threads.map((thread, index) => {
+            const turnCount = thread.messages
+              ? thread.messages.filter(m => m.role === 'USER').length
+              : 0;
+            const created = thread.createdAt
+              ? new Date(thread.createdAt).toLocaleDateString()
+              : '—';
+            return (
+              <div
+                key={thread.id || `thread-${index}`}
+                onClick={() => onThreadSelect(thread)}
+                className="p-2.5 border border-line-subtle rounded-md hover:bg-muted hover:border-line cursor-pointer transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <h4 className="text-sm font-medium text-ink truncate">{thread.title}</h4>
+                    {thread.description && (
+                      <p className="text-xs text-ink-secondary line-clamp-2">{thread.description}</p>
+                    )}
+                    <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-ink-tertiary">
+                      <span className={`px-1.5 py-0.5 rounded ${statusClass(thread.status)}`}>
+                        {statusLabel(thread.status)}
+                      </span>
+                      <span>{turnCount}턴</span>
+                      <span>·</span>
+                      <span>{created}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {thread.status === 'ACTIVE' && (
+                      <Button onClick={() => archiveThread(thread.id)} size="sm" variant="ghost" className="text-[10px] px-1.5">
+                        보관
+                      </Button>
+                    )}
+                    <Button onClick={() => deleteThread(thread.id)} size="sm" variant="ghost" className="text-[10px] px-1.5">
+                      삭제
+                    </Button>
                   </div>
                 </div>
-                <div className="flex space-x-1">
-                  {thread.status === 'ACTIVE' && (
-                    <Button
-                      onClick={() => archiveThread(thread.id)}
-                      size="sm"
-                      variant="outline"
-                      className="text-yellow-600 hover:text-yellow-700"
-                    >
-                      보관
-                    </Button>
-                  )}
-                  <Button
-                    onClick={() => deleteThread(thread.id)}
-                    size="sm"
-                    variant="outline"
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    삭제
-                  </Button>
-                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

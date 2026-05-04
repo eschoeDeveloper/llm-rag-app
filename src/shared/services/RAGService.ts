@@ -39,7 +39,6 @@ export class RAGService {
     try {
       const url = baseUrl || this.baseUrl;
       const fullUrl = toAbsoluteUrl(url, '/embeddings/search');
-      console.log('[RAGService] searchVectors - Full URL:', fullUrl);
       const response = await fetch(fullUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,18 +79,12 @@ export class RAGService {
     try {
       const url = baseUrl || this.baseUrl;
       const fullUrl = toAbsoluteUrl(url, '/chat');
-      console.log('[RAGService] chatWithRAG - Full URL:', fullUrl);
-      console.log('[RAGService] chatWithRAG - baseUrl:', baseUrl);
-      console.log('[RAGService] chatWithRAG - this.baseUrl:', this.baseUrl);
       
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {
         headers['X-Session-ID'] = sessionId;
       }
-      console.log('[RAGService] chatWithRAG - Headers:', headers);
 
-      console.log('[RAGService] chatWithRAG - About to send request to:', fullUrl);
-      console.log('[RAGService] chatWithRAG - Request method: POST');
       
       const response = await fetch(fullUrl, {
         method: 'POST',
@@ -105,9 +98,6 @@ export class RAGService {
         signal
       });
 
-      console.log('[RAGService] chatWithRAG - Response status:', response.status);
-      console.log('[RAGService] chatWithRAG - Response statusText:', response.statusText);
-      console.log('[RAGService] chatWithRAG - Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -146,19 +136,12 @@ export class RAGService {
     try {
       const url = baseUrl || this.baseUrl;
       const fullUrl = toAbsoluteUrl(url, '/ask');
-      console.log('[RAGService] askWithoutRAG - Full URL:', fullUrl);
-      console.log('[RAGService] askWithoutRAG - baseUrl:', baseUrl);
-      console.log('[RAGService] askWithoutRAG - this.baseUrl:', this.baseUrl);
       
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {
         headers['X-Session-ID'] = sessionId;
       }
-      console.log('[RAGService] askWithoutRAG - Headers:', headers);
-      console.log('[RAGService] askWithoutRAG - Body:', { query, config: this.config, sessionId });
 
-      console.log('[RAGService] askWithoutRAG - About to send request to:', fullUrl);
-      console.log('[RAGService] askWithoutRAG - Request method: POST');
       
       const response = await fetch(fullUrl, {
         method: 'POST',
@@ -171,9 +154,6 @@ export class RAGService {
         signal
       });
 
-      console.log('[RAGService] askWithoutRAG - Response status:', response.status);
-      console.log('[RAGService] askWithoutRAG - Response statusText:', response.statusText);
-      console.log('[RAGService] askWithoutRAG - Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const errorText = await response.text();

@@ -31,7 +31,6 @@ export function useRAGChat(baseUrl?: string) {
   useEffect(() => {
     if (sessionId) {
       localStorage.setItem('rag_session_id', sessionId);
-      console.log('Session ID updated:', sessionId);
     }
   }, [sessionId]);
   
@@ -64,24 +63,17 @@ export function useRAGChat(baseUrl?: string) {
     abortRef.current = controller;
 
     setLoading(true);
-    console.log('[useRAGChat] sendMessage - mode:', mode);
-    console.log('[useRAGChat] sendMessage - effectiveBaseUrl:', effectiveBaseUrl);
-    console.log('[useRAGChat] sendMessage - baseUrl prop:', baseUrl);
     try {
       let response: ChatResponse;
-      let searchResults: SearchResult[] = [];
 
       if (mode === 'chat') {
-        // RAG 모드: 먼저 검색 수행
-        console.log('[useRAGChat] Starting chat mode with RAG');
-        searchResults = await ragService.searchVectors(content, effectiveBaseUrl, controller.signal);
-        setSearchResults(searchResults);
-        
-        // 검색 결과와 함께 채팅 (세션 ID 포함)
-        response = await ragService.chatWithRAG(content, effectiveBaseUrl, searchResults, controller.signal, sessionId);
+        // 백엔드 /chat 가 내부에서 vector 검색 + rerank + budget 까지 처리.
+        // 빈 searchResults 를 넘기면 백엔드가 알아서 retrieval 한다.
+        response = await ragService.chatWithRAG(content, effectiveBaseUrl, [], controller.signal, sessionId);
+        const cited = (response.metadata as any)?.citations ?? [];
+        setSearchResults(cited);
       } else {
         // 직접 질문 모드 (세션 ID 포함)
-        console.log('[useRAGChat] Starting ask mode without RAG');
         response = await ragService.askWithoutRAG(content, effectiveBaseUrl, controller.signal, sessionId);
       }
 
@@ -90,13 +82,14 @@ export function useRAGChat(baseUrl?: string) {
         setSessionId(response.sessionId);
       }
 
+      const citations = (response.metadata as any)?.citations ?? [];
       const assistantMessage: Message = {
         role: 'assistant',
         content: response.content,
         timestamp: Date.now(),
         metadata: {
           ...response.metadata,
-          searchResults: mode === 'chat' ? searchResults : undefined,
+          searchResults: mode === 'chat' ? citations : undefined,
           sessionId: response.sessionId
         }
       };
@@ -170,26 +163,6 @@ export function useRAGChat(baseUrl?: string) {
     setLoading(false);
   }, []);
 
-  const evaluateSearchQuality = useCallback(() => {
-    return ragService.evaluateSearchQuality(searchResults);
-  }, [ragService, searchResults]);
-
-  const optimizeParameters = useCallback((feedback: 'positive' | 'negative') => {
-    const optimization = ragService.optimizeSearchParameters('', searchResults, feedback);
-    if (Object.keys(optimization).length > 0) {
-      updateConfig(optimization);
-    }
-  }, [ragService, searchResults, updateConfig]);
-
-  // 세션 ID 재설정 함수
-  const resetSession = useCallback(() => {
-    const newSessionId = generateSessionId();
-    localStorage.setItem('rag_session_id', newSessionId);
-    setSessionId(newSessionId);
-    setMessages([]);
-    setSearchResults([]);
-  }, []);
-
   return {
     messages,
     setMessages,
@@ -202,9 +175,6 @@ export function useRAGChat(baseUrl?: string) {
     loadHistory,
     cancelRequest,
     updateConfig,
-    evaluateSearchQuality,
-    optimizeParameters,
-    resetSession
   };
 }
 

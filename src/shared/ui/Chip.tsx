@@ -1,37 +1,49 @@
+import React from "react";
+
 type ChipProps = {
   children: React.ReactNode;
-  variant?: "default" | "primary" | "secondary" | "success" | "warning" | "danger" | "info";
-  size?: "sm" | "md" | "lg";
+  variant?: "default" | "accent" | "soft";
+  size?: "sm" | "md";
+  active?: boolean;
+  onClick?: () => void;
   className?: string;
 };
 
-export const Chip = ({ 
-  children, 
-  variant = "default", 
-  size = "md",
-  className = ""
+/**
+ * 작은 라벨 / 토글 버튼 양쪽 용도.
+ * onClick 이 있으면 button 으로 렌더 (포커스링 + 키보드 접근성).
+ * active=true 면 variant="accent" 강제.
+ */
+export const Chip = ({
+  children,
+  variant = "default",
+  size = "sm",
+  active,
+  onClick,
+  className = "",
 }: ChipProps) => {
-  const baseClasses = "inline-flex items-center font-medium transition-all duration-200 transform hover:scale-105";
-  
-  const variantClasses = {
-    default: "bg-white border border-gray-300 text-gray-700 shadow-sm",
-    primary: "bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 shadow-md",
-    secondary: "bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0 shadow-md",
-    success: "bg-gradient-to-r from-green-500 to-green-600 text-white border-0 shadow-md",
-    warning: "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-0 shadow-md",
-    danger: "bg-gradient-to-r from-red-500 to-red-600 text-white border-0 shadow-md",
-    info: "bg-gradient-to-r from-cyan-500 to-cyan-600 text-white border-0 shadow-md"
+  const base = "inline-flex items-center font-medium transition-colors";
+  const effectiveVariant = active ? "accent" : variant;
+  const variants = {
+    default: "bg-elevated text-ink-secondary border border-line-subtle",
+    accent: "bg-matcha text-ink-on-accent",
+    soft: "bg-matcha-soft text-matcha-hover",
   };
-  
-  const sizeClasses = {
-    sm: "px-2 py-1 text-xs rounded-full",
-    md: "px-3 py-1.5 text-sm rounded-full",
-    lg: "px-4 py-2 text-base rounded-full"
+  const interactive = onClick
+    ? "cursor-pointer hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-matcha/40"
+    : "";
+  const sizes = {
+    sm: "px-2 py-0.5 text-xs rounded",
+    md: "px-2.5 py-1 text-sm rounded",
   };
+  const cls = `${base} ${variants[effectiveVariant]} ${sizes[size]} ${interactive} ${className}`;
 
-  return (
-    <span className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}>
-      {children}
-    </span>
-  );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cls}>
+        {children}
+      </button>
+    );
+  }
+  return <span className={cls}>{children}</span>;
 };

@@ -10,20 +10,20 @@ type Props = {
   className?: string;
 };
 
-export function Input({ 
-  value, 
-  onChange, 
-  placeholder, 
-  disabled, 
+export function Input({
+  value,
+  onChange,
+  placeholder,
+  disabled,
   type = "text",
   min,
   max,
   step,
-  className = ""
+  className = "",
 }: Props) {
   return (
     <input
-      className={`w-full rounded-2xl border-2 border-gray-200 p-3 text-gray-700 placeholder-gray-400 outline-none shadow-sm transition-all duration-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 disabled:bg-gray-100 disabled:cursor-not-allowed ${className}`}
+      className={`w-full rounded-md border border-line bg-elevated px-3 py-2 text-sm text-ink placeholder-ink-tertiary outline-none transition-colors focus:border-matcha focus:ring-2 focus:ring-matcha/30 disabled:bg-muted disabled:cursor-not-allowed ${className}`}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
