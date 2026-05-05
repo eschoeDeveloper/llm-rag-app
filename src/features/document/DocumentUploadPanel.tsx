@@ -4,6 +4,7 @@ import { Button } from '../../shared/ui/Button.tsx';
 import { Input } from '../../shared/ui/Input.tsx';
 import { documentUploadService, DocumentUploadRequest, DocumentInfo } from '../../shared/services/DocumentUploadService.ts';
 import { VisionUsageCard } from './VisionUsageCard.tsx';
+import { MetricsCard } from './MetricsCard.tsx';
 
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -171,6 +172,7 @@ export const DocumentUploadPanel: React.FC<DocumentUploadPanelProps> = ({
   return (
     <div className="space-y-5">
       <VisionUsageCard baseUrl={baseUrl} sessionId={sessionId} />
+      <MetricsCard baseUrl={baseUrl} />
 
       {warnings.length > 0 && (
         <div className="rounded-md border border-line bg-soft-sand p-3 space-y-1">

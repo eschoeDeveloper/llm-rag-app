@@ -45,7 +45,8 @@ export function useRAGChat(baseUrl?: string) {
 
   const sendMessage = useCallback(async (
     content: string,
-    mode: 'ask' | 'chat' = 'chat'
+    mode: 'ask' | 'chat' = 'chat',
+    customPrompt?: string
   ) => {
     if (!content.trim() || loading) return;
 
@@ -64,37 +65,92 @@ export function useRAGChat(baseUrl?: string) {
 
     setLoading(true);
     try {
-      let response: ChatResponse;
-
       if (mode === 'chat') {
-        // 백엔드 /chat 가 내부에서 vector 검색 + rerank + budget 까지 처리.
-        // 빈 searchResults 를 넘기면 백엔드가 알아서 retrieval 한다.
-        response = await ragService.chatWithRAG(content, effectiveBaseUrl, [], controller.signal, sessionId);
-        const cited = (response.metadata as any)?.citations ?? [];
-        setSearchResults(cited);
+        // 스트리밍 RAG — 토큰 단위로 ASSISTANT 메시지 누적 업데이트.
+        // placeholder 는 "첫 토큰 도착 시점" 까지 지연 추가 → typing indicator 와의 중복 표시 방지.
+        let citations: any[] = [];
+        let model = '';
+        let accumulated = '';
+        let placeholderTs: number | null = null;
+
+        await ragService.chatStream(
+          content,
+          effectiveBaseUrl,
+          {
+            onMeta: (meta) => {
+              citations = meta.citations ?? [];
+              model = meta.model ?? '';
+              setSearchResults(citations);
+            },
+            onDelta: (token) => {
+              accumulated += token;
+              if (placeholderTs === null) {
+                // 첫 토큰 — 이제 ASSISTANT 메시지 노출 (그 전까지는 typing indicator 만)
+                const ts = Date.now();
+                placeholderTs = ts;
+                setMessages(prev => [...prev, {
+                  role: 'assistant',
+                  content: accumulated,
+                  timestamp: ts,
+                }]);
+              } else {
+                const ts = placeholderTs;
+                setMessages(prev => prev.map(m =>
+                  m.timestamp === ts ? { ...m, content: accumulated } : m
+                ));
+              }
+            },
+            onDone: () => {
+              if (placeholderTs === null) return;
+              const ts = placeholderTs;
+              setMessages(prev => prev.map(m =>
+                m.timestamp === ts ? {
+                  ...m,
+                  metadata: {
+                    citations,
+                    searchResults: citations,
+                    model,
+                  } as any,
+                } : m
+              ));
+            },
+            onError: (msg) => {
+              if (placeholderTs === null) {
+                // 첫 토큰도 못 받음 → 에러 메시지를 새로 추가
+                setMessages(prev => [...prev, {
+                  role: 'assistant',
+                  content: `(스트리밍 오류) ${msg}`,
+                  timestamp: Date.now(),
+                  error: true,
+                }]);
+              } else {
+                const ts = placeholderTs;
+                setMessages(prev => prev.map(m =>
+                  m.timestamp === ts ? {
+                    ...m,
+                    content: `(스트리밍 오류) ${msg}`,
+                    error: true,
+                  } : m
+                ));
+              }
+            },
+          },
+          controller.signal,
+          sessionId,
+          customPrompt,
+        );
       } else {
-        // 직접 질문 모드 (세션 ID 포함)
-        response = await ragService.askWithoutRAG(content, effectiveBaseUrl, controller.signal, sessionId);
+        // ask 모드는 비스트리밍
+        const response = await ragService.askWithoutRAG(content, effectiveBaseUrl, controller.signal, sessionId, customPrompt);
+        if (response.sessionId) setSessionId(response.sessionId);
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: response.content,
+          timestamp: Date.now(),
+          metadata: { ...response.metadata, sessionId: response.sessionId }
+        };
+        setMessages(prev => [...prev, assistantMessage]);
       }
-
-      // 세션 ID 업데이트 (응답에서 받은 세션 ID 사용)
-      if (response.sessionId) {
-        setSessionId(response.sessionId);
-      }
-
-      const citations = (response.metadata as any)?.citations ?? [];
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: response.content,
-        timestamp: Date.now(),
-        metadata: {
-          ...response.metadata,
-          searchResults: mode === 'chat' ? citations : undefined,
-          sessionId: response.sessionId
-        }
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       const errorMessage: Message = {
         role: 'assistant',

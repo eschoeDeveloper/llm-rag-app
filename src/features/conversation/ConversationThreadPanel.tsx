@@ -23,6 +23,9 @@ export const ConversationThreadPanel: React.FC<ConversationThreadPanelProps> = (
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadDescription, setNewThreadDescription] = useState('');
+  // 제목 편집 — 한 번에 한 스레드만 편집 가능 (id 보유)
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
 
   useEffect(() => {
     conversationThreadService.setBaseUrl(baseUrl);
@@ -80,6 +83,36 @@ export const ConversationThreadPanel: React.FC<ConversationThreadPanelProps> = (
       onError('스레드 보관 중 오류가 발생했습니다: ' + (error as Error).message);
     }
   }, [sessionId, onError, queryClient, refreshKey, refreshThreads]);
+
+  const startEdit = useCallback((thread: ConversationThread) => {
+    setEditingId(thread.id);
+    setEditingTitle(thread.title);
+  }, []);
+
+  const cancelEdit = useCallback(() => {
+    setEditingId(null);
+    setEditingTitle('');
+  }, []);
+
+  const saveTitle = useCallback(async (threadId: string) => {
+    if (!sessionId || !editingTitle.trim()) {
+      cancelEdit();
+      return;
+    }
+    const newTitle = editingTitle.trim();
+    try {
+      // 낙관 업데이트 — 즉시 UI 반영
+      queryClient.setQueryData<ConversationThread[]>(["threads", sessionId, refreshKey], prev =>
+        (prev ?? []).map(t => t.id === threadId ? { ...t, title: newTitle } : t));
+      setEditingId(null);
+      setEditingTitle('');
+      await conversationThreadService.updateThreadTitle(threadId, { title: newTitle }, sessionId);
+      refreshThreads();
+    } catch (error) {
+      onError('제목 변경 중 오류가 발생했습니다: ' + (error as Error).message);
+      refreshThreads(); // 실패 시 서버 상태로 복원
+    }
+  }, [sessionId, editingTitle, queryClient, refreshKey, refreshThreads, onError, cancelEdit]);
 
   const deleteThread = useCallback(async (threadId: string) => {
     if (!sessionId) return;
@@ -142,12 +175,38 @@ export const ConversationThreadPanel: React.FC<ConversationThreadPanelProps> = (
             return (
               <div
                 key={thread.id || `thread-${index}`}
-                onClick={() => onThreadSelect(thread)}
-                className="p-2.5 border border-line-subtle rounded-md hover:bg-muted hover:border-line cursor-pointer transition-colors"
+                onClick={() => editingId !== thread.id && onThreadSelect(thread)}
+                className={`p-2.5 border border-line-subtle rounded-md transition-colors ${
+                  editingId === thread.id
+                    ? 'bg-canvas border-line cursor-default'
+                    : 'hover:bg-muted hover:border-line cursor-pointer'
+                }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0 space-y-1">
-                    <h4 className="text-sm font-medium text-ink truncate">{thread.title}</h4>
+                    {editingId === thread.id ? (
+                      <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1.5">
+                        <Input
+                          value={editingTitle}
+                          onChange={setEditingTitle}
+                          placeholder="새 제목"
+                          className="flex-1"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveTitle(thread.id);
+                            else if (e.key === 'Escape') cancelEdit();
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <h4
+                        className="text-sm font-medium text-ink truncate hover:text-matcha-hover"
+                        onDoubleClick={(e) => { e.stopPropagation(); startEdit(thread); }}
+                        title="더블클릭으로 제목 수정"
+                      >
+                        {thread.title}
+                      </h4>
+                    )}
                     {thread.description && (
                       <p className="text-xs text-ink-secondary line-clamp-2">{thread.description}</p>
                     )}
@@ -161,14 +220,30 @@ export const ConversationThreadPanel: React.FC<ConversationThreadPanelProps> = (
                     </div>
                   </div>
                   <div className="flex flex-col gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    {thread.status === 'ACTIVE' && (
-                      <Button onClick={() => archiveThread(thread.id)} size="sm" variant="ghost" className="text-[10px] px-1.5">
-                        보관
-                      </Button>
+                    {editingId === thread.id ? (
+                      <>
+                        <Button onClick={() => saveTitle(thread.id)} size="sm" variant="primary" className="text-[10px] px-1.5">
+                          저장
+                        </Button>
+                        <Button onClick={cancelEdit} size="sm" variant="ghost" className="text-[10px] px-1.5">
+                          취소
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button onClick={() => startEdit(thread)} size="sm" variant="ghost" className="text-[10px] px-1.5">
+                          편집
+                        </Button>
+                        {thread.status === 'ACTIVE' && (
+                          <Button onClick={() => archiveThread(thread.id)} size="sm" variant="ghost" className="text-[10px] px-1.5">
+                            보관
+                          </Button>
+                        )}
+                        <Button onClick={() => deleteThread(thread.id)} size="sm" variant="ghost" className="text-[10px] px-1.5">
+                          삭제
+                        </Button>
+                      </>
                     )}
-                    <Button onClick={() => deleteThread(thread.id)} size="sm" variant="ghost" className="text-[10px] px-1.5">
-                      삭제
-                    </Button>
                   </div>
                 </div>
               </div>

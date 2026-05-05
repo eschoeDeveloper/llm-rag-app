@@ -72,20 +72,21 @@ export class RAGService {
     baseUrl: string,
     searchResults: SearchResult[],
     signal?: AbortSignal,
-    sessionId?: string | null
+    sessionId?: string | null,
+    customPrompt?: string
   ): Promise<ChatResponse> {
     const startTime = Date.now();
-    
+
     try {
       const url = baseUrl || this.baseUrl;
       const fullUrl = toAbsoluteUrl(url, '/chat');
-      
+
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {
         headers['X-Session-ID'] = sessionId;
       }
 
-      
+
       const response = await fetch(fullUrl, {
         method: 'POST',
         headers,
@@ -93,7 +94,8 @@ export class RAGService {
           query,
           searchResults,
           config: this.config,
-          sessionId
+          sessionId,
+          customPrompt: customPrompt || undefined
         }),
         signal
       });
@@ -125,31 +127,127 @@ export class RAGService {
     }
   }
 
+  /**
+   * 스트리밍 RAG 채팅 — SSE 응답을 토큰 단위로 콜백 호출.
+   *
+   * 백엔드 이벤트 형식:
+   *   data: {"type":"meta","citations":[...],"model":"..."}
+   *   data: {"type":"delta","content":"안녕"}
+   *   data: {"type":"done"}
+   *   data: {"type":"error","message":"..."}
+   *
+   * fetch + ReadableStream 직접 파싱 — EventSource 는 GET 만 지원해서 사용 불가.
+   */
+  async chatStream(
+    query: string,
+    baseUrl: string,
+    callbacks: {
+      onMeta?: (meta: { citations?: any[]; model?: string; retrievalEmpty?: boolean }) => void;
+      onDelta: (token: string) => void;
+      onDone?: () => void;
+      onError?: (message: string) => void;
+    },
+    signal?: AbortSignal,
+    sessionId?: string | null,
+    customPrompt?: string,
+  ): Promise<void> {
+    const url = baseUrl || this.baseUrl;
+    const fullUrl = toAbsoluteUrl(url, '/chat/stream');
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (sessionId) headers['X-Session-ID'] = sessionId;
+
+    const response = await fetch(fullUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        query,
+        config: this.config,
+        sessionId,
+        customPrompt: customPrompt || undefined,
+      }),
+      signal,
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error(`Stream failed: ${response.status} ${response.statusText}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE 이벤트는 \n\n 으로 구분
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) >= 0) {
+          const block = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+
+          // data: 라인들 합치기
+          let data = '';
+          for (const line of block.split('\n')) {
+            if (line.startsWith('data:')) {
+              data += line.slice(5).trim();
+            }
+          }
+          if (!data) continue;
+
+          try {
+            const event = JSON.parse(data);
+            if (event.type === 'meta') {
+              callbacks.onMeta?.(event);
+            } else if (event.type === 'delta') {
+              callbacks.onDelta(event.content ?? '');
+            } else if (event.type === 'done') {
+              callbacks.onDone?.();
+              return;
+            } else if (event.type === 'error') {
+              callbacks.onError?.(event.message ?? 'unknown stream error');
+              return;
+            }
+          } catch (e) {
+            // JSON 파싱 실패 — 무시
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
   async askWithoutRAG(
     query: string,
     baseUrl: string,
     signal?: AbortSignal,
-    sessionId?: string | null
+    sessionId?: string | null,
+    customPrompt?: string
   ): Promise<ChatResponse> {
     const startTime = Date.now();
-    
+
     try {
       const url = baseUrl || this.baseUrl;
       const fullUrl = toAbsoluteUrl(url, '/ask');
-      
+
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (sessionId) {
         headers['X-Session-ID'] = sessionId;
       }
 
-      
+
       const response = await fetch(fullUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify({
           query,
           config: this.config,
-          sessionId
+          sessionId,
+          customPrompt: customPrompt || undefined
         }),
         signal
       });

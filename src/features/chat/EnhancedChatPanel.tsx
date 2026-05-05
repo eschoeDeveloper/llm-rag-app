@@ -45,6 +45,17 @@ export function EnhancedChatPanel({ base }: { base: string }) {
   const isBusy = loading || threadChat.sending;
   const boxRef = useScrollToBottom([messages, isBusy]);
 
+  // typing indicator 는 "사용자 입력 후 ~ ASSISTANT 응답 시작 전" 구간에만 노출.
+  // ASSISTANT 메시지가 화면에 등장한 시점부터는 그 메시지가 채워지는 모습이 보이므로 typing 중복.
+  const lastMsg = messages[messages.length - 1];
+  const showTyping = isBusy && (!lastMsg || lastMsg.role === "user");
+
+  // 활성 모드에 따라 cancel 디스패치 (스레드 모드면 thread cancel, 아니면 RAG cancel)
+  const cancelActive = React.useCallback(() => {
+    if (activeThread) threadChat.cancel();
+    else cancelRequest();
+  }, [activeThread, threadChat, cancelRequest]);
+
   React.useEffect(() => () => cancelRequest(), [cancelRequest]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -55,10 +66,12 @@ export function EnhancedChatPanel({ base }: { base: string }) {
     setInput("");
 
     try {
+      // customPrompt 가 비어있으면 백엔드는 기본 SYSTEM_PROMPT 사용. 트림한 값만 전달.
+      const effectiveCustomPrompt = customPrompt.trim() ? customPrompt.trim() : undefined;
       if (activeThread && sessionId) {
-        await threadChat.send(message);
+        await threadChat.send(message, effectiveCustomPrompt);
       } else {
-        await sendMessage(message, mode);
+        await sendMessage(message, mode, effectiveCustomPrompt);
       }
     } catch (err) {
       setError("메시지 전송 중 오류가 발생했습니다: " + (err as Error).message);
@@ -129,13 +142,13 @@ export function EnhancedChatPanel({ base }: { base: string }) {
           </div>
         </div>
 
-        <MessageList messages={messages} scrollRef={boxRef} isAssistantTyping={isBusy} />
+        <MessageList messages={messages} scrollRef={boxRef} isAssistantTyping={showTyping} />
 
         <MessageComposer
           input={input}
           onInputChange={setInput}
           onSubmit={handleSubmit}
-          onCancel={cancelRequest}
+          onCancel={cancelActive}
           loading={isBusy}
           mode={mode as "ask" | "chat"}
           error={error}

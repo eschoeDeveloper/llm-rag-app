@@ -39,6 +39,7 @@ export interface ThreadChatRequest {
   query: string;
   mode: 'chat' | 'ask';
   config?: { topK?: number; threshold?: number; maxTokens?: number };
+  customPrompt?: string;
 }
 
 export class ConversationThreadService {
@@ -129,7 +130,12 @@ export class ConversationThreadService {
    * 응답은 갱신된 ConversationThread 전체. 마지막 ASSISTANT 메시지의 metadata.citations 가
    * 인용 정보를 포함.
    */
-  async threadChat(threadId: string, request: ThreadChatRequest, sessionId: string): Promise<ConversationThread> {
+  async threadChat(
+    threadId: string,
+    request: ThreadChatRequest,
+    sessionId: string,
+    signal?: AbortSignal,
+  ): Promise<ConversationThread> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (sessionId) {
       headers['X-Session-ID'] = sessionId;
@@ -139,7 +145,8 @@ export class ConversationThreadService {
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(request)
+      body: JSON.stringify(request),
+      signal,
     });
 
     if (!response.ok) {

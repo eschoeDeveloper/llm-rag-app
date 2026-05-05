@@ -1,3 +1,5 @@
+import React from "react";
+
 type Props = {
   value: string;
   onChange: (v: string) => void;
@@ -8,6 +10,8 @@ type Props = {
   max?: string;
   step?: string;
   className?: string;
+  autoFocus?: boolean;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 };
 
 export function Input({
@@ -20,6 +24,8 @@ export function Input({
   max,
   step,
   className = "",
+  autoFocus,
+  onKeyDown,
 }: Props) {
   return (
     <input
@@ -32,6 +38,8 @@ export function Input({
       min={min}
       max={max}
       step={step}
+      autoFocus={autoFocus}
+      onKeyDown={onKeyDown}
     />
   );
 }
